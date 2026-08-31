@@ -5,7 +5,7 @@ import Quickshell.Io
 import qs.Commons
 import qs.Ui
 
-// Clippy Bar Widget: Displays an interactive Clippy button in the Omarchy status bar,
+// Clippy Bar Widget: Displays an interactive Nerd Font paperclip button in the Omarchy status bar,
 // reflects live active/paused state, and summons the Clippy control panel.
 BarWidget {
   id: root
@@ -18,13 +18,12 @@ BarWidget {
   property bool clippyEnabled: true
   property string clippyMode: "companion"
   property string clippyScale: "normal"
-  property bool isWinking: false
 
   // Panel lifecycle forwarding (Omarchy popout coordinator contract)
   readonly property bool opened: panelLoader.item ? panelLoader.item.opened === true : false
   readonly property bool popoutSwitchClosing: panelLoader.item ? panelLoader.item.popoutSwitchClosing === true : false
-  readonly property real openPanelIndicatorWidth: content.implicitWidth
-  readonly property real openPanelIndicatorHeight: content.implicitHeight
+  readonly property real openPanelIndicatorWidth: button.slotSize
+  readonly property real openPanelIndicatorHeight: button.slotSize
 
   function injectPanel() {
     var target = panelLoader.item
@@ -94,43 +93,20 @@ BarWidget {
     Quickshell.execDetached(["omarchy-shell", "dorneles.omaclippy", "play", "random"])
   }
 
-  // Playful little wink animation in the bar icon
-  Timer {
-    id: winkTimer
-    interval: 8000 + Math.random() * 6000
-    running: root.clippyEnabled
-    repeat: true
-    onTriggered: {
-      root.isWinking = true
-      winkEndTimer.restart()
-    }
-  }
-
-  Timer {
-    id: winkEndTimer
-    interval: 220
-    repeat: false
-    onTriggered: root.isWinking = false
-  }
-
   implicitWidth: button.implicitWidth
   implicitHeight: button.implicitHeight
 
-  WidgetButton {
+  BarIconButton {
     id: button
     anchors.fill: parent
     bar: root.bar
-    text: " "
-    labelVisible: false
-    hasVisualContent: true
+    text: "\uf0c6" // Nerd Font paperclip icon (nf-fa-paperclip)
     active: root.opened
+    dimmed: !root.clippyEnabled
 
     tooltipText: root.clippyEnabled
       ? "Clippy Companion \u2014 Active (" + root.clippyMode + ")\n\u2022 Click: Open Control Panel\n\u2022 Right-click: Turn Off\n\u2022 Middle-click: Play Animation"
       : "Clippy Companion \u2014 Paused\n\u2022 Click: Open Control Panel\n\u2022 Right-click: Turn On"
-
-    fixedWidth: root.vertical ? -1 : Math.round(content.implicitWidth + scaledHorizontalMargin * 2)
-    fixedHeight: root.vertical ? Math.round(content.implicitHeight + scaledVerticalPadding * 2) : -1
 
     onPressed: function(btnCode) {
       if (btnCode === Qt.RightButton) {
@@ -139,33 +115,6 @@ BarWidget {
         root.playRandom()
       } else {
         root.toggle()
-      }
-    }
-
-    Item {
-      id: content
-      anchors.centerIn: parent
-      implicitWidth: Style.space(22)
-      implicitHeight: Style.space(22)
-
-      Image {
-        id: clippyIcon
-        anchors.centerIn: parent
-        width: Style.space(20)
-        height: Style.space(20)
-        source: Qt.resolvedUrl("assets/icon.svg")
-        opacity: root.clippyEnabled ? (root.isWinking ? 0.7 : 1.0) : 0.35
-        scale: root.isWinking ? 1.12 : 1.0
-        smooth: true
-        mipmap: true
-        fillMode: Image.PreserveAspectFit
-
-        Behavior on opacity {
-          NumberAnimation { duration: 150; easing.type: Easing.OutQuad }
-        }
-        Behavior on scale {
-          NumberAnimation { duration: 180; easing.type: Easing.OutBack }
-        }
       }
     }
   }
