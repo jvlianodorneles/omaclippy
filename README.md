@@ -20,6 +20,15 @@ Omaclippy brings the iconic 1997 Microsoft Office Assistant back to life as a mo
 
 ---
 
+## 📦 Requirements & Dependencies
+
+Omaclippy runs out-of-the-box on Omarchy Linux with zero third-party package compilation:
+- **Omarchy Shell & Hyprland:** Native Quickshell runtime environment.
+- **PipeWire (`pw-play`):** Standard system audio utility for synchronized retro sound effects.
+- **Python 3:** Standard library only (no `pip` packages required; powers background tracker and MCP server).
+
+---
+
 ## 🚀 Installation
 
 ### 1. Clone the plugin to your Omarchy plugins directory:
