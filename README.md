@@ -251,37 +251,92 @@ omarchy-shell dorneles.omaclippy status
 
 ---
 
-## 🎭 Animation Catalogue (43 Total)
+## 🎭 Complete Animation Catalogue (43 Total)
 
-- **Transformations & Tools:**
-  - `Save`: Turns into a paper holder with a lined notebook page sliding in/out 🔊
-  - `Print`: Rolls out a lined sheet of paper like a printing feed 🔊
-  - `SendMail`: Folds into a paper airplane and flies across the screen 🔊
-  - `Writing`: Holds a yellow paper pad and writes with a pen 🔊
-  - `Searching`: Pulls out a vintage spyglass/telescope and peers through it 🔊
-  - `EmptyTrash`: Spins into a wire tornado/vortex that shreds and swallows a paper 🔊
-  - `Processing`: Morphs into a scoop/paddle that juggles a paper cup 🔊
-  - `Congratulate` / `GetWizardy`: Unfolds into a glowing green Checkmark with magical sparkles 🔊
-- **Greetings, Expressions & Gestures:**
-  - `Wave`: Happily smiles and waves a hand 🔊
-  - `Greeting`: Spins in from a spiral and unfolds into Clippy 🔊
-  - `GoodBye`: Waves farewell and spins out of the screen 🔊
-  - `Alert`: Knocks both hands urgently against the glass screen 🔊
-  - `GetAttention`: Taps head/eyes down on a paper mat to catch attention 🔊
-  - `Explain`: Opens both arms wide to explain a concept
-  - `Hearing_1`: Cups a hand behind the ear listening intently 🔊
-  - `CheckingSomething`: Leans forward and curiously inspects the ground/desktop 🔊
-  - `GestureUp`, `GestureDown`, `GestureLeft`, `GestureRight`: Pointing gestures
-- **Idles & Directional Looks:**
-  - `IdleAtom` / `GetTechy` / `Thinking`: Morphs into an atom with 3 spinning orbital rings 🔊
-  - `IdleRopePile` / `GetArtsy`: Unravels like a hanging mobile of loose strings and pulls back up
-  - `IdleSnooze`: Rests head, falls fast asleep, and snores with floating *Zzz*
-  - `IdleFingerTap`: Impatiently taps fingers on the ground
-  - `IdleHeadScratch`: Scratches the top of the head in thought
-  - `IdleEyeBrowRaise`: Inquisitively raises the left eyebrow
-  - `IdleSideToSide`: Gently rocks body and eyes side to side
-  - `Idle1_1` & `RestPose`: Natural breathing, eye blinking, and neutral resting posture
-  - `LookUp`, `LookDown`, `LookLeft`, `LookRight`, `LookUpLeft`, `LookUpRight`, `LookDownLeft`, `LookDownRight`: Precise directional glances
+Below is the complete, frame-by-frame verified catalogue of all 43 authentic Microsoft Clippy animations, including direct CLI commands, durations, audio effects, and exact visual behaviors on screen:
+
+### 📦 1. Tools, Actions & Transformations
+
+| CLI Command | Canonical Name | Aliases | Duração | Áudio | Comportamento Visual Exato |
+|---|---|---|:---:|:---:|---|
+| `omaclippy save [msg]` | `Save` | `disk`, `floppy` | 5.53s | 🔊 | Transforma-se em um **suporte de arame com folha de caderno pautada** que desliza para dentro e para fora. |
+| `omaclippy print [msg]` | `Print` | `printer` | 8.40s | 🔊 | Transforma-se em uma **folha pautada que rola e ondula** como se passasse por uma prensa de papel. |
+| `omaclippy mail [msg]` | `SendMail` | `email`, `airplane` | 6.80s | 🔊 | Dobra-se em formato de um **pequeno aviãozinho de papel** e voa para fora da tela. |
+| `omaclippy write [msg]` | `Writing` | `notepad` | 8.40s | 🔊 | Segura uma **folhinha amarela** e anota rapidamente com uma caneta/lápis vermelho. |
+| `omaclippy search [msg]` | `Searching` | `find`, `look` | 8.10s | 🔊 | Puxa uma **luneta / telescópio retrô com suporte** e espia através dela inspecionando a tela. |
+| `omaclippy trash [msg]` | `EmptyTrash` | `delete` | 5.00s | 🔊 | Transforma-se em um **redemoinho / tornado de arame em espiral** que suga e tritura uma folha de papel. |
+| `omaclippy process [msg]` | `Processing` | `gear` | 3.80s | 🔊 | Transforma-se em uma **pázinha/concha** que joga e apara um potinho de papel. |
+| `omaclippy done [msg]` | `Congratulate` | `congrats`, `celebrate`, `ok`, `success`, `finish` | 3.68s | 🔊 | Desdobra-se e transforma-se no **símbolo de V / Checkmark verde brilhante** com faíscas estelares mágicas. |
+
+---
+
+### 👋 2. Greetings, Expressions & Alarms
+
+| CLI Command | Canonical Name | Aliases | Duração | Áudio | Comportamento Visual Exato |
+|---|---|---|:---:|:---:|---|
+| `omaclippy wave [msg]` | `Wave` | - | 4.90s | 🔊 | Sorri e **acena alegremente com a mão** para o usuário. |
+| `omaclippy greeting [msg]` | `Greeting` | `greet`, `hi`, `hello` | 4.45s | 🔊 | Surge **girando em espiral e se desdobra** na tela como Clippy. |
+| `omaclippy goodbye [msg]` | `GoodBye` | `bye` | 4.45s | 🔊 | **Acena em despedida e desaparece** girando para fora da tela. |
+| `omaclippy alert [msg]` | `Alert` | `warn`, `warning` | 2.40s | 🔊 | **Bate repetidamente com as duas mãos no vidro da tela** chamando atenção urgente. |
+| `omaclippy attention [msg]` | `GetAttention` | - | 2.65s | 🔊 | Inclina-se sobre um **tapete/folha amarela** e bate com a cabeça e os olhos. |
+| `omaclippy thinking [msg]` | `Thinking` | `think` | 4.50s | 🔊 | Transforma o corpo em um **modelo atômico com 3 anéis orbitais e elétrons girando**. |
+| `omaclippy explain [msg]` | `Explain` | - | 1.50s | - | Abre os dois braços lateralmente gesticulando como quem explica. |
+| `omaclippy hearing [msg]` | `Hearing_1` | `listen` | 5.40s | 🔊 | Coloca a **mão curvada atrás da orelha** para escutar com atenção. |
+| `omaclippy check [msg]` | `CheckingSomething` | - | 6.64s | 🔊 | Inclina-se para a frente e **examina o chão/mesa com curiosidade**. |
+
+---
+
+### ⏳ 3. Idles & Postures
+
+| CLI Command | Canonical Name | Aliases | Duração | Áudio | Comportamento Visual Exato |
+|---|---|---|:---:|:---:|---|
+| `omaclippy sleep [msg]` | `IdleSnooze` | `snooze`, `zzz` | 13.60s | - | Apoia a cabeça, **dorme profundamente e solta letras (*Zzz*)**. |
+| `omaclippy atom [msg]` | `IdleAtom` | - | 4.50s | - | Transforma-se no **átomo com 3 anéis giratórios**. |
+| `omaclippy mobile [msg]` | `IdleRopePile` | `rope` | 7.50s | - | Desmancha-se como um **móbile / novelo de cordas soltas penduradas** e se puxa de volta. |
+| `omaclippy tap [msg]` | `IdleFingerTap` | - | 1.15s | - | Bate os dedos no chão impacientemente. |
+| `omaclippy scratch [msg]` | `IdleHeadScratch` | - | 1.90s | - | Coça o topo da cabeça com expressão de dúvida. |
+| `omaclippy eyebrow [msg]` | `IdleEyeBrowRaise`| - | 1.50s | - | Ergue a sobrancelha esquerda desconfiado. |
+| `omaclippy sidetoside [msg]` | `IdleSideToSide` | - | 5.60s | - | Balança suavemente o corpo e os olhos de um lado para o outro. |
+| `omaclippy idle [msg]` | `Idle1_1` | - | 7.30s | - | Respiração natural e piscar de olhos. |
+| `omaclippy rest` | `RestPose` | - | 0.10s | - | Pose neutra clássica de repouso. |
+
+---
+
+### 👉 4. Gestos e Apontadores
+
+| CLI Command | Canonical Name | Duração | Comportamento Visual |
+|---|---|:---:|---|
+| `omaclippy play GestureUp` | `GestureUp` | 2.80s | Estica o braço e aponta para cima. |
+| `omaclippy play GestureDown` | `GestureDown` | 2.25s | Estica o braço e aponta para baixo. |
+| `omaclippy play GestureLeft` | `GestureLeft` | 3.05s | Estica o braço e aponta para a esquerda. |
+| `omaclippy play GestureRight` | `GestureRight` | 3.25s | Estica o braço e aponta para a direita. |
+
+---
+
+### 👀 5. Rastreamento de Olhar do Cursor (8 Direções)
+
+| CLI Command | Canonical Name | Duração | Comportamento Visual |
+|---|---|:---:|---|
+| `omaclippy play LookUp` | `LookUp` | 1.80s | Olha para cima na tela. |
+| `omaclippy play LookDown` | `LookDown` | 1.80s | Olha para baixo na tela. |
+| `omaclippy play LookRight` | `LookRight` | 1.80s | Olha para o lado esquerdo da tela. |
+| `omaclippy play LookLeft` | `LookLeft` | 1.80s | Olha para o lado direito da tela. |
+| `omaclippy play LookUpRight` | `LookUpRight` | 1.80s | Olha para a diagonal superior esquerda. |
+| `omaclippy play LookUpLeft` | `LookUpLeft` | 1.80s | Olha para a diagonal superior direita. |
+| `omaclippy play LookDownRight` | `LookDownRight` | 1.80s | Olha para a diagonal inferior esquerda. |
+| `omaclippy play LookDownLeft` | `LookDownLeft` | 1.80s | Olha para a diagonal inferior direita. |
+
+---
+
+### 🎭 6. Nomes Herdados da API MS Agent & Transições
+
+| CLI Command | Canonical Name | Aliases | Duração | Áudio | Comportamento Visual |
+|---|---|---|:---:|:---:|---|
+| `omaclippy wizard [msg]` | `GetWizardy` | `wizardry`, `magic`, `merlin` | 3.68s | 🔊 | *(Nome herdado da API)* Transforma-se no Checkmark mágico com faíscas. |
+| `omaclippy tech [msg]` | `GetTechy` | `techy`, `gettech` | 4.50s | 🔊 | *(Nome herdado da API)* Transforma-se no átomo com efeito sonoro de tecnologia. |
+| `omaclippy art [msg]` | `GetArtsy` | `artsy`, `getart`, `painter` | 4.90s | 🔊 | *(Nome herdado da API)* Desmancha-se como móbile / novelo de cordas. |
+| `omaclippy play Hide` | `Hide` | - | 0.05s | - | Transição de recolher e ocultar. |
+| `omaclippy play Show` | `Show` | - | 0.05s | - | Transição de desdobrar e surgir. |
 
 ---
 
