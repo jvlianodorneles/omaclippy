@@ -1915,14 +1915,7 @@ var animations = {
         "duration": 100,
         "sound": null,
         "exitBranch": null,
-        "branching": {
-          "branches": [
-            {
-              "frameIndex": 44,
-              "weight": 97
-            }
-          ]
-        }
+        "branching": null
       },
       {
         "x": 124,
@@ -5785,14 +5778,7 @@ var animations = {
         "duration": 100,
         "sound": null,
         "exitBranch": null,
-        "branching": {
-          "branches": [
-            {
-              "frameIndex": 18,
-              "weight": 85
-            }
-          ]
-        }
+        "branching": null
       },
       {
         "x": 2108,

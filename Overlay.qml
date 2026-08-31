@@ -652,6 +652,9 @@ PanelWindow {
         soundEnabled: root.soundEnabled,
         soundVolume: root.soundVolume,
         currentAnim: root.currentAnim,
+        currentFrameIdx: root.currentFrameIdx,
+        frameCoords: [root.currentFrameX, root.currentFrameY],
+        isCustomPlaying: root.isCustomPlaying,
         pos: [Math.round(root.posX), Math.round(root.posY)],
         speechVisible: root.speechVisible
       })
