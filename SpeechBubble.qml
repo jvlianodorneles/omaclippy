@@ -157,6 +157,7 @@ Item {
       Text {
         id: messageText
         text: root.displayedText
+        textFormat: Text.PlainText
         color: "#1e293b"
         font.pixelSize: 12
         font.weight: Font.Medium

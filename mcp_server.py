@@ -91,10 +91,23 @@ def run_omarchy_cmd(*args):
     except Exception as e:
         return f"error: {e}"
 
+def sanitize_str(val, max_len=2000):
+    if val is None:
+        return ""
+    val = str(val).strip()
+    return val[:max_len]
+
+def sanitize_anim(val):
+    if not val:
+        return "Explain"
+    val = str(val).strip()
+    cleaned = "".join(c for c in val if c.isalnum() or c in ("_", "-"))
+    return cleaned[:50] or "Explain"
+
 def handle_call_tool(name, arguments):
     if name == "clippy_react":
-        anim = arguments.get("animation", "Explain")
-        msg = arguments.get("message")
+        anim = sanitize_anim(arguments.get("animation", "Explain"))
+        msg = sanitize_str(arguments.get("message"))
         
         # Play animation
         run_omarchy_cmd("play", anim)
@@ -106,12 +119,12 @@ def handle_call_tool(name, arguments):
         return {"content": [{"type": "text", "text": f"Clippy is now playing '{anim}'"}]}
 
     elif name == "clippy_speak":
-        msg = arguments.get("message", "Hello!")
+        msg = sanitize_str(arguments.get("message", "Hello!"))
         run_omarchy_cmd("speak", msg)
         return {"content": [{"type": "text", "text": f"Clippy is now speaking: \"{msg}\""}]}
 
     elif name == "clippy_animate":
-        anim = arguments.get("animation", "Wave")
+        anim = sanitize_anim(arguments.get("animation", "Wave"))
         res = run_omarchy_cmd("play", anim)
         return {"content": [{"type": "text", "text": f"Clippy animation result: {res}"}]}
 

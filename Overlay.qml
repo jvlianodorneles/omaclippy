@@ -133,7 +133,9 @@ PanelWindow {
 
   function playSound(soundId) {
     if (!root.soundEnabled || root.soundVolume <= 0 || !soundId) return
-    var filePath = root.soundsDir + soundId + ".mp3"
+    var safeSoundId = String(soundId).trim()
+    if (!/^[a-zA-Z0-9_-]+$/.test(safeSoundId)) return
+    var filePath = root.soundsDir + safeSoundId + ".mp3"
     Quickshell.execDetached(["pw-play", "--volume", root.soundVolume.toFixed(2), filePath])
   }
 
