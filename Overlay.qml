@@ -32,7 +32,7 @@ PanelWindow {
 
   WlrLayershell.namespace: "omaclippy"
   WlrLayershell.layer: WlrLayer.Top
-  WlrLayershell.keyboardFocus: root.promptActive ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
+  WlrLayershell.keyboardFocus: root.promptActive ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
 
   // Input mask covers the companion area (enclosing Clippy and Speech Bubble)
   mask: Region {

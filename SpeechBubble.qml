@@ -184,14 +184,11 @@ Item {
 
           RowLayout {
             anchors.fill: parent
-            anchors.margins: 4
-            spacing: 4
-
-            Text {
-              text: "📎"
-              font.pixelSize: 11
-              Layout.alignment: Qt.AlignVCenter
-            }
+            anchors.leftMargin: 8
+            anchors.rightMargin: 8
+            anchors.topMargin: 4
+            anchors.bottomMargin: 4
+            spacing: 0
 
             TextInput {
               id: promptInput
@@ -203,6 +200,7 @@ Item {
               font.weight: Font.Medium
               clip: true
               selectByMouse: true
+              focus: root.isPromptMode
 
               Text {
                 text: "Pergunte ao Agente... (Enter para enviar)"
