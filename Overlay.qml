@@ -517,17 +517,13 @@ PanelWindow {
     }
   }
 
-  // -------------------------------------------------------------
-  // Cursor Interaction & Look Directions
-  // -------------------------------------------------------------
+  property string lastLookDirection: ""
+
   function updatePointer(x, y) {
     root.pointerX = x
     root.pointerY = y
 
     if (!root.reactToCursor || !root.clippyEnabled || root.isDragging || root.isCustomPlaying || root.promptActive) return
-
-    var now = Date.now()
-    if (now - root.lastCursorLookTime < 4500) return
 
     var centerX = root.posX + root.clippyWidth / 2
     var centerY = root.posY + root.clippyHeight / 2
@@ -535,20 +531,30 @@ PanelWindow {
     var dy = y - centerY
     var dist = Math.hypot(dx, dy)
 
-    if (dist > 80 && dist < 700 && Math.random() < 0.14) {
-      root.lastCursorLookTime = now
-      var lookAnim = "RestPose"
-      if (Math.abs(dx) > Math.abs(dy) * 1.5) {
-        lookAnim = dx < 0 ? "LookLeft" : "LookRight"
-      } else if (Math.abs(dy) > Math.abs(dx) * 1.5) {
-        lookAnim = dy < 0 ? "LookUp" : "LookDown"
+    // Ignore if cursor is beyond 950px
+    if (dist > 950) return
+
+    // Determine target look direction from angle
+    var targetAnim = "RestPose"
+    if (dist >= 30) {
+      if (Math.abs(dx) > Math.abs(dy) * 1.8) {
+        targetAnim = dx < 0 ? "LookLeft" : "LookRight"
+      } else if (Math.abs(dy) > Math.abs(dx) * 1.8) {
+        targetAnim = dy < 0 ? "LookUp" : "LookDown"
       } else {
-        if (dx < 0 && dy < 0) lookAnim = "LookUpLeft"
-        else if (dx > 0 && dy < 0) lookAnim = "LookUpRight"
-        else if (dx < 0 && dy > 0) lookAnim = "LookDownLeft"
-        else lookAnim = "LookDownRight"
+        if (dx < 0 && dy < 0) targetAnim = "LookUpLeft"
+        else if (dx > 0 && dy < 0) targetAnim = "LookUpRight"
+        else if (dx < 0 && dy > 0) targetAnim = "LookDownLeft"
+        else targetAnim = "LookDownRight"
       }
-      root.playAnimation(lookAnim)
+    }
+
+    var now = Date.now()
+    // Trigger glance when direction changes or after 1.5s of continuous focus
+    if (targetAnim !== "RestPose" && (targetAnim !== root.lastLookDirection || now - root.lastCursorLookTime > 1500)) {
+      root.lastLookDirection = targetAnim
+      root.lastCursorLookTime = now
+      root.playAnimation(targetAnim)
     }
   }
 
