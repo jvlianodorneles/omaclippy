@@ -111,7 +111,7 @@ PanelWindow {
     : root.clippyHeight
 
   // -------------------------------------------------------------
-  // Centralized Animation Engine
+  // Centralized Animation Engine with Loop Bounding
   // -------------------------------------------------------------
   property string currentAnim: "RestPose"
   property var currentAnimObj: AnimData.getAnimation("RestPose")
@@ -119,6 +119,8 @@ PanelWindow {
   property real currentFrameX: 0
   property real currentFrameY: 0
   property bool isCustomPlaying: false
+  property int animLoopCount: 0
+  property int maxAnimLoops: 2
 
   // -------------------------------------------------------------
   // Centralized Speech Bubble State
@@ -158,14 +160,27 @@ PanelWindow {
     var nextIdx = root.currentFrameIdx + 1
 
     if (cur.branching && cur.branching.branches && cur.branching.branches.length > 0) {
-      var roll = Math.random() * 100
-      var accum = 0
-      for (var i = 0; i < cur.branching.branches.length; i++) {
-        var branch = cur.branching.branches[i]
-        accum += (branch.weight || 0)
-        if (roll <= accum) {
-          nextIdx = branch.frameIndex
-          break
+      // If loop limit hasn't been exceeded, allow branching
+      if (root.animLoopCount < root.maxAnimLoops) {
+        var roll = Math.random() * 100
+        var accum = 0
+        for (var i = 0; i < cur.branching.branches.length; i++) {
+          var branch = cur.branching.branches[i]
+          accum += (branch.weight || 0)
+          if (roll <= accum) {
+            if (branch.frameIndex <= root.currentFrameIdx) {
+              root.animLoopCount += 1
+            }
+            nextIdx = branch.frameIndex
+            break
+          }
+        }
+      } else {
+        // Loop limit reached: force forward progression or exitBranch
+        if (cur.exitBranch !== null && cur.exitBranch !== undefined) {
+          nextIdx = cur.exitBranch
+        } else {
+          nextIdx = root.currentFrameIdx + 1
         }
       }
     }
@@ -175,6 +190,8 @@ PanelWindow {
       root.currentAnim = "RestPose"
       root.currentAnimObj = AnimData.getAnimation("RestPose")
       root.currentFrameIdx = 0
+      root.animLoopCount = 0
+      safetyTimer.stop()
       root.applyFrame(0)
     } else {
       root.currentFrameIdx = nextIdx
@@ -190,21 +207,50 @@ PanelWindow {
     onTriggered: root.advanceFrame()
   }
 
+  // Safety timer to prevent any unexpected hang
+  Timer {
+    id: safetyTimer
+    interval: 10000
+    repeat: false
+    running: false
+    onTriggered: {
+      if (root.currentAnim !== "RestPose") {
+        root.isCustomPlaying = false
+        root.currentAnim = "RestPose"
+        root.currentAnimObj = AnimData.getAnimation("RestPose")
+        root.currentFrameIdx = 0
+        root.animLoopCount = 0
+        root.applyFrame(0)
+      }
+    }
+  }
+
   function playAnimation(animName) {
     var anim = AnimData.getAnimation(animName)
     if (!anim || !anim.frames || anim.frames.length === 0) {
       root.currentAnim = "RestPose"
       root.currentAnimObj = AnimData.getAnimation("RestPose")
       root.currentFrameIdx = 0
+      root.animLoopCount = 0
+      safetyTimer.stop()
       root.applyFrame(0)
       return
     }
 
+    root.animLoopCount = 0
     root.isCustomPlaying = (animName !== "RestPose")
     root.currentAnim = animName
     root.currentAnimObj = anim
     root.currentFrameIdx = 0
     root.applyFrame(0)
+
+    if (animName !== "RestPose") {
+      var timeout = Math.max(8000, (anim.totalDuration || 3000) * 2.5)
+      safetyTimer.interval = timeout
+      safetyTimer.restart()
+    } else {
+      safetyTimer.stop()
+    }
   }
 
   function playRandomAction() {
