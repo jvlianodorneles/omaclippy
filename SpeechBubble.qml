@@ -17,8 +17,31 @@ Item {
 
   signal dismissed()
 
-  implicitWidth: bubbleRect.implicitWidth
-  implicitHeight: bubbleRect.implicitHeight
+  // -------------------------------------------------------------
+  // Pre-calculated Dimensions using full text in advance
+  // -------------------------------------------------------------
+  Text {
+    id: measureText
+    visible: false
+    text: root.fullText
+    font.pixelSize: 12
+    font.weight: Font.Medium
+    wrapMode: Text.WordWrap
+    width: 230
+  }
+
+  readonly property real bubbleContentWidth: measureText.paintedWidth > 200
+    ? 240
+    : Math.max(120, measureText.paintedWidth)
+  readonly property real bubbleContentHeight: Math.max(22, measureText.paintedHeight)
+
+  readonly property real calculatedWidth: bubbleContentWidth + 44
+  readonly property real calculatedHeight: bubbleContentHeight + 20
+
+  implicitWidth: calculatedWidth
+  implicitHeight: calculatedHeight
+  width: calculatedWidth
+  height: calculatedHeight
 
   visible: opacity > 0.01
   opacity: active ? 1.0 : 0.0
@@ -79,10 +102,7 @@ Item {
   // -------------------------------------------------------------
   Rectangle {
     id: bubbleRect
-    anchors.left: parent.left
-    anchors.top: parent.top
-    implicitWidth: Math.min(300, Math.max(150, messageText.implicitWidth + 36))
-    implicitHeight: Math.max(46, messageText.implicitHeight + 24)
+    anchors.fill: parent
     radius: 10
     color: "#fffbeb" // Classic soft warm parchment yellow
     border.color: "#d97706"
@@ -155,7 +175,9 @@ Item {
         font.weight: Font.Medium
         wrapMode: Text.WordWrap
         Layout.fillWidth: true
+        Layout.fillHeight: true
         Layout.alignment: Qt.AlignVCenter
+        verticalAlignment: Text.AlignVCenter
       }
 
       // Close '✕' button
