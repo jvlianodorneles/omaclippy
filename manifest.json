@@ -1,0 +1,110 @@
+{
+  "schemaVersion": 1,
+  "id": "dorneles.omaclippy",
+  "name": "Omaclippy",
+  "version": "1.0.0",
+  "author": "Dorneles",
+  "license": "MIT",
+  "icon": "assets/icon.svg",
+  "description": "The nostalgic Microsoft Clippy companion for the Omarchy desktop. Features authentic retro sprite animations, sound effects, speech balloons with tips, interactive drag & drop, and reactive desktop behaviors.",
+  "keywords": [
+    "clippy",
+    "companion",
+    "assistant",
+    "retro",
+    "pet",
+    "quickshell",
+    "omarchy",
+    "overlay"
+  ],
+  "kinds": [
+    "overlay",
+    "bar-widget"
+  ],
+  "keepLoaded": true,
+  "entryPoints": {
+    "overlay": "Overlay.qml",
+    "barWidget": "BarWidget.qml"
+  },
+  "barWidget": {
+    "displayName": "Clippy",
+    "icon": "assets/icon.svg",
+    "description": "Clippy desktop companion \u2014 click to open control panel and trigger animations",
+    "category": "Fun",
+    "allowMultiple": false,
+    "defaultSection": "right",
+    "defaults": {
+      "clippyEnabled": true,
+      "clippyMode": "companion",
+      "clippyScale": "normal",
+      "soundEnabled": true,
+      "soundVolume": 0.5,
+      "idleFrequency": "normal",
+      "speechBubbles": true,
+      "reactToCursor": true,
+      "reactToWindows": true
+    },
+    "schema": [
+      {
+        "key": "clippyEnabled",
+        "type": "boolean",
+        "label": "Clippy Active",
+        "defaultValue": true,
+        "description": "Whether Clippy is currently active on your screen."
+      },
+      {
+        "key": "clippyMode",
+        "type": "enum",
+        "label": "Companion Mode",
+        "options": [
+          "companion",
+          "roam",
+          "perch"
+        ],
+        "defaultValue": "companion",
+        "description": "Behavior mode: Stationary companion, wandering screen, or perching on windows."
+      },
+      {
+        "key": "clippyScale",
+        "type": "enum",
+        "label": "Clippy Size",
+        "options": [
+          "small",
+          "normal",
+          "large",
+          "giant"
+        ],
+        "defaultValue": "normal",
+        "description": "Visual size of Clippy on screen."
+      },
+      {
+        "key": "soundEnabled",
+        "type": "boolean",
+        "label": "Sound Effects",
+        "defaultValue": true,
+        "description": "Play authentic sound effects with animations."
+      },
+      {
+        "key": "speechBubbles",
+        "type": "boolean",
+        "label": "Speech Bubbles",
+        "defaultValue": true,
+        "description": "Show retro speech balloons with tips and messages."
+      },
+      {
+        "key": "reactToCursor",
+        "type": "boolean",
+        "label": "React to Cursor",
+        "defaultValue": true,
+        "description": "Clippy glances in the direction of the mouse pointer."
+      },
+      {
+        "key": "reactToWindows",
+        "type": "boolean",
+        "label": "React to Windows",
+        "defaultValue": true,
+        "description": "Clippy reacts to moving windows."
+      }
+    ]
+  }
+}
