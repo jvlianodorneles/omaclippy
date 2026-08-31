@@ -1,0 +1,2 @@
+# omaclippy
+Modern clippy companion
