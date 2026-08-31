@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+# Omaclippy Git Pre-Push Hook
+# Place in .git/hooks/pre-push or global git hooks
+
+if command -v omaclippy >/dev/null 2>&1; then
+  omaclippy react SendMail "Enviando commits para o repositório remoto..." >/dev/null 2>&1 &
+elif command -v omarchy-shell >/dev/null 2>&1; then
+  omarchy-shell dorneles.omaclippy play SendMail >/dev/null 2>&1 &
+fi

@@ -32,6 +32,7 @@ Panel {
   property bool speechBubbles: true
   property bool reactToCursor: true
   property bool reactToWindows: true
+  property bool reactToAgents: true
 
   property string currentTab: "actions" // "actions" | "settings"
   property bool tipFeedback: false
@@ -58,6 +59,7 @@ Panel {
             if (cfg.speechBubbles !== undefined) root.speechBubbles = Boolean(cfg.speechBubbles)
             if (cfg.reactToCursor !== undefined) root.reactToCursor = Boolean(cfg.reactToCursor)
             if (cfg.reactToWindows !== undefined) root.reactToWindows = Boolean(cfg.reactToWindows)
+            if (cfg.reactToAgents !== undefined) root.reactToAgents = Boolean(cfg.reactToAgents)
           }
         }
       } catch (e) {}
@@ -75,7 +77,8 @@ Panel {
         idleFrequency: root.idleFrequency,
         speechBubbles: root.speechBubbles,
         reactToCursor: root.reactToCursor,
-        reactToWindows: root.reactToWindows
+        reactToWindows: root.reactToWindows,
+        reactToAgents: root.reactToAgents
       }
       configFile.setText(JSON.stringify(cfg, null, 2) + "\n")
     } catch (e) {}
@@ -614,6 +617,17 @@ Panel {
                   checked: root.reactToWindows
                   onClicked: {
                     root.reactToWindows = !root.reactToWindows
+                    root.saveConfig()
+                  }
+                }
+
+                Toggle {
+                  width: behaviorCol.width
+                  label: "AI Agents (Herdr)"
+                  description: "Alerts when AI agents finish or get blocked"
+                  checked: root.reactToAgents
+                  onClicked: {
+                    root.reactToAgents = !root.reactToAgents
                     root.saveConfig()
                   }
                 }

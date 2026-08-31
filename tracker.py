@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 """Omaclippy Tracker Daemon for Omarchy / Hyprland.
 
-Streams real-time pointer coordinates, window moves, and clicks from Hyprland IPC
-and pointer input devices to stdout as JSON lines:
+Streams real-time pointer coordinates, window moves, clicks, and AI agent events
+from Hyprland IPC, pointer input devices, and Herdr CLI to stdout as JSON lines:
   {"cursor": {"x": 1234, "y": 567}}
   {"window_moved": true, "rect": {"x": 12, "y": 38, "width": 1342, "height": 718}}
   {"click": true, "btn": "left", "x": 1234, "y": 567}
+  {"agent_event": "blocked", "agent": "worker-1", "message": "..."}
 """
 
 import errno
@@ -17,7 +18,9 @@ import select
 import signal
 import socket
 import struct
+import subprocess
 import sys
+import threading
 import time
 
 EV_KEY = 0x01
@@ -51,6 +54,7 @@ BUTTON_NAMES = {
 }
 
 running = True
+stdout_lock = threading.Lock()
 
 
 def _signal_handler(_sig, _frame):
@@ -62,6 +66,66 @@ def _signal_handler(_sig, _frame):
 signal.signal(signal.SIGINT, _signal_handler)
 signal.signal(signal.SIGTERM, _signal_handler)
 signal.signal(signal.SIGHUP, _signal_handler)
+
+
+def emit(data):
+    with stdout_lock:
+        try:
+            sys.stdout.write(json.dumps(data) + "\n")
+            sys.stdout.flush()
+        except (BrokenPipeError, IOError):
+            sys.exit(0)
+
+
+def herdr_agent_watcher():
+    """Background thread watching Herdr agent states."""
+    known_states = {}
+    time.sleep(2.0)
+
+    while running:
+        try:
+            res = subprocess.run(
+                ["herdr", "agent", "list"],
+                capture_output=True,
+                text=True,
+                timeout=3
+            )
+            if res.returncode == 0 and res.stdout.strip():
+                try:
+                    payload = json.loads(res.stdout)
+                    agents = payload.get("result", {}).get("agents", [])
+                    if isinstance(agents, list):
+                        for a in agents:
+                            name = a.get("name") or a.get("pane_id") or "Agent"
+                            status = a.get("agent_status", "unknown")
+                            prev_status = known_states.get(name)
+
+                            if prev_status is not None and prev_status != status:
+                                if status == "blocked":
+                                    emit({
+                                        "agent_event": "blocked",
+                                        "agent": name,
+                                        "message": f"⚠️ Agente '{name}' está bloqueado e aguarda sua resposta!"
+                                    })
+                                elif status == "done":
+                                    emit({
+                                        "agent_event": "done",
+                                        "agent": name,
+                                        "message": f"🎉 Agente '{name}' concluiu sua tarefa com sucesso!"
+                                    })
+                                elif status == "working" and prev_status in ("idle", "unknown", "done"):
+                                    emit({
+                                        "agent_event": "working",
+                                        "agent": name,
+                                        "message": f"Agente '{name}' começou a trabalhar..."
+                                    })
+
+                            known_states[name] = status
+                except Exception:
+                    pass
+        except Exception:
+            pass
+        time.sleep(2.5)
 
 
 def get_hyprland_socket_paths():
@@ -154,15 +218,11 @@ def open_pointer_devices():
     return devices
 
 
-def emit(data):
-    try:
-        sys.stdout.write(json.dumps(data) + "\n")
-        sys.stdout.flush()
-    except (BrokenPipeError, IOError):
-        sys.exit(0)
-
-
 def main():
+    # Start background Herdr agent watcher
+    watcher_thread = threading.Thread(target=herdr_agent_watcher, daemon=True)
+    watcher_thread.start()
+
     cmd_sock, event_sock = get_hyprland_socket_paths()
     devices = open_pointer_devices()
 
@@ -273,6 +333,7 @@ def main():
                             if e.errno in (errno.ENODEV, errno.EBADF):
                                 try:
                                     os.close(fd)
+                                    pass
                                 except Exception:
                                     pass
                                 devices.pop(fd, None)
@@ -285,7 +346,7 @@ def main():
             x, y = pos
             if x != last_x or y != last_y:
                 last_x, last_y = x, y
-                emit({"cursor": {"x": x, "y": y}})
+                emit({"cursor": {"x": x, "y": last_y}})
                 idle_count = 0
                 time.sleep(0.012)
             else:

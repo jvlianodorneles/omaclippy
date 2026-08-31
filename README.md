@@ -92,6 +92,96 @@ omarchy restart shell
 
 ---
 
+## 🤖 AI Agents & System Integration
+
+Omaclippy transforms Clippy into an interactive visual companion for AI coding assistants (**Google Antigravity**, **Claude Code**, **Herdr**) and development workflows.
+
+### 🧠 1. Model Context Protocol (MCP) Server (Antigravity & Claude)
+
+Omaclippy includes a built-in MCP server (`mcp_server.py`) exposing tools for AI agents:
+- `clippy_react(animation, message)`: Visual thought/action reaction + balloon.
+- `clippy_speak(message)`: Typewriter speech balloon on screen.
+- `clippy_animate(animation)`: Play authentic animation + retro sound.
+- `clippy_status()`: Get live coordinates, mode, and visibility.
+
+#### 🔧 Configure in Claude Code / Claude Desktop:
+
+Add to your `~/.claude/mcp.json` or run:
+
+```bash
+claude mcp add omaclippy python3 ~/.config/omarchy/plugins/dorneles.omaclippy/mcp_server.py
+```
+
+#### 🔧 Configure in Antigravity / Gemini CLI:
+
+Add to your MCP settings or plugin configuration:
+
+```json
+{
+  "mcpServers": {
+    "omaclippy": {
+      "command": "python3",
+      "args": ["/home/dorneles/.config/omarchy/plugins/dorneles.omaclippy/mcp_server.py"]
+    }
+  }
+}
+```
+
+---
+
+### 🐝 2. Herdr Autonomous Agents Integration
+
+Omaclippy monitors [Herdr](https://github.com/fabean/herdr) agent states in real time:
+- **Agent `working`:** Clippy plays `GetTechy` / `Writing` animation.
+- **Agent `blocked` (needs user input):** Clippy plays `Alert` with retro warning sound and displays: *"⚠️ Agente 'worker-1' está bloqueado e aguarda sua resposta!"*.
+- **Agent `done` (completed task):** Clippy plays `Congratulate` / `Wave` with celebration audio: *"🎉 Agente 'worker-1' concluiu sua tarefa com sucesso!"*.
+
+*Toggle this feature on/off anytime in the Control Panel under Settings ➔ "AI Agents (Herdr)".*
+
+---
+
+### 💻 3. CLI Helper (`omaclippy`)
+
+You can control Clippy directly from terminal commands or scripts:
+
+```bash
+# Quick agent status triggers
+omaclippy thinking "Analisando dependências do projeto..."
+omaclippy writing "Refatorando arquivos QML..."
+omaclippy techy "Executando testes automatizados..."
+omaclippy wizard "Executando migração de banco de dados..."
+omaclippy alert "Erro encontrado nos testes!"
+omaclippy done "Build finalizado com sucesso!"
+
+# Speech & animations
+omaclippy speak "Parece que você está codificando no Arch Linux!"
+omaclippy play Congratulate
+omaclippy tip
+```
+
+---
+
+### 🪝 4. Git & Terminal Shell Hooks
+
+Ready-to-use hooks are provided in the `hooks/` directory:
+
+1. **Git Post-Commit Hook (`hooks/git-post-commit`):**
+   - Plays the `Save` (floppy disk) animation and shows your commit message.
+   - Copy to `.git/hooks/post-commit` or configure globally.
+
+2. **Git Pre-Push Hook (`hooks/git-pre-push`):**
+   - Plays the `SendMail` (paper airplane) animation when pushing code.
+   - Copy to `.git/hooks/pre-push`.
+
+3. **Zsh Long Command Timer (`hooks/zsh-command-hook.zsh`):**
+   - Automatically notifies you via Clippy when long-running builds, downloads, or test suites (> 8s) finish or fail.
+   - Add to your `~/.zshrc`:
+     ```bash
+     source ~/.config/omarchy/plugins/dorneles.omaclippy/hooks/zsh-command-hook.zsh
+     ```
+
+---
+
 ## 🛠️ CLI & IPC Commands
 
 Control Clippy from any script, keybinding, or terminal:

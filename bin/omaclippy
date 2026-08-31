@@ -1,0 +1,136 @@
+#!/usr/bin/env bash
+# Omaclippy CLI Helper - Desktop Companion Controller
+
+set -e
+
+DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
+usage() {
+  cat << USAGE
+Omaclippy CLI - Control your desktop Clippy companion
+
+Usage:
+  omaclippy <command> [args...]
+
+Quick AI & Agent Actions:
+  omaclippy react <animation> [message]   Play animation with optional speech balloon
+  omaclippy thinking [message]            Trigger Thinking animation + message
+  omaclippy writing [message]             Trigger Writing animation + message
+  omaclippy techy [message]               Trigger GetTechy animation + message
+  omaclippy wizard [message]              Trigger GetWizardy animation + message
+  omaclippy artsy [message]               Trigger GetArtsy animation + message
+  omaclippy alert [message]               Trigger Alert animation + message
+  omaclippy done [message]                Trigger Congratulate/Wave celebration
+
+General Commands:
+  omaclippy play <animation>              Play specific animation (e.g. Wave, Save, Print)
+  omaclippy speak <text>                  Show speech balloon with text
+  omaclippy tip                           Show speech balloon with random retro tip
+  omaclippy toggle                        Toggle companion On / Off
+  omaclippy on                            Activate companion
+  omaclippy off                           Pause companion
+  omaclippy reset                         Reset Clippy position to default corner
+  omaclippy setScale <scale>              Change scale (small, normal, large, giant)
+  omaclippy setMode <mode>                Change mode (companion, roam, perch)
+  omaclippy status                        Display current JSON status
+  omaclippy mcp                           Run MCP Server for Claude / Antigravity
+
+Examples:
+  omaclippy speak "Looks like you're writing a shell script!"
+  omaclippy react GetTechy "Compiling Linux kernel..."
+  omaclippy done "All unit tests passed!"
+USAGE
+}
+
+cmd="${1:-}"
+
+if [[ -z "$cmd" || "$cmd" == "--help" || "$cmd" == "-h" ]]; then
+  usage
+  exit 0
+fi
+
+shift || true
+
+case "$cmd" in
+  react)
+    anim="${1:-Explain}"
+    msg="${2:-}"
+    omarchy-shell dorneles.omaclippy play "$anim" >/dev/null 2>&1 || true
+    if [[ -n "$msg" ]]; then
+      omarchy-shell dorneles.omaclippy speak "$msg"
+    fi
+    ;;
+  thinking)
+    msg="${1:-Thinking...}"
+    omarchy-shell dorneles.omaclippy play Thinking >/dev/null 2>&1 || true
+    omarchy-shell dorneles.omaclippy speak "$msg"
+    ;;
+  writing)
+    msg="${1:-Writing code...}"
+    omarchy-shell dorneles.omaclippy play Writing >/dev/null 2>&1 || true
+    omarchy-shell dorneles.omaclippy speak "$msg"
+    ;;
+  techy)
+    msg="${1:-Processing tech stuff...}"
+    omarchy-shell dorneles.omaclippy play GetTechy >/dev/null 2>&1 || true
+    omarchy-shell dorneles.omaclippy speak "$msg"
+    ;;
+  wizard)
+    msg="${1:-Performing magic...}"
+    omarchy-shell dorneles.omaclippy play GetWizardy >/dev/null 2>&1 || true
+    omarchy-shell dorneles.omaclippy speak "$msg"
+    ;;
+  artsy)
+    msg="${1:-Creating something artistic...}"
+    omarchy-shell dorneles.omaclippy play GetArtsy >/dev/null 2>&1 || true
+    omarchy-shell dorneles.omaclippy speak "$msg"
+    ;;
+  alert)
+    msg="${1:-Attention needed!}"
+    omarchy-shell dorneles.omaclippy play Alert >/dev/null 2>&1 || true
+    omarchy-shell dorneles.omaclippy speak "$msg"
+    ;;
+  done)
+    msg="${1:-Task completed successfully!}"
+    omarchy-shell dorneles.omaclippy play Congratulate >/dev/null 2>&1 || true
+    omarchy-shell dorneles.omaclippy speak "$msg"
+    ;;
+  play)
+    omarchy-shell dorneles.omaclippy play "$1"
+    ;;
+  speak)
+    omarchy-shell dorneles.omaclippy speak "$1"
+    ;;
+  tip)
+    omarchy-shell dorneles.omaclippy tip
+    ;;
+  toggle)
+    omarchy-shell dorneles.omaclippy toggle
+    ;;
+  on)
+    omarchy-shell dorneles.omaclippy on
+    ;;
+  off)
+    omarchy-shell dorneles.omaclippy off
+    ;;
+  reset)
+    omarchy-shell dorneles.omaclippy resetPosition
+    ;;
+  setScale)
+    omarchy-shell dorneles.omaclippy setScale "$1"
+    ;;
+  setMode)
+    omarchy-shell dorneles.omaclippy setMode "$1"
+    ;;
+  status)
+    omarchy-shell dorneles.omaclippy status
+    ;;
+  mcp)
+    exec python3 "$DIR/mcp_server.py"
+    ;;
+  *)
+    echo "Unknown command: $cmd" >&2
+    usage
+    exit 1
+    ;;
+esac

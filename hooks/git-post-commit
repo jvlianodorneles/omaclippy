@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+# Omaclippy Git Post-Commit Hook
+# Place in .git/hooks/post-commit or global git hooks
+
+COMMIT_MSG="$(git log -1 --pretty=%B | head -n 1 | tr '"' '\"')"
+if command -v omaclippy >/dev/null 2>&1; then
+  omaclippy react Save "Commit gravado: $COMMIT_MSG" >/dev/null 2>&1 &
+elif command -v omarchy-shell >/dev/null 2>&1; then
+  omarchy-shell dorneles.omaclippy play Save >/dev/null 2>&1 &
+fi

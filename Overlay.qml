@@ -51,6 +51,7 @@ PanelWindow {
   property bool speechBubbles: true
   property bool reactToCursor: true
   property bool reactToWindows: true
+  property bool reactToAgents: true
 
   // State Persistence
   readonly property string stateDir: Quickshell.env("HOME") + "/.local/state/omarchy/omaclippy"
@@ -342,6 +343,7 @@ PanelWindow {
             if (cfg.speechBubbles !== undefined) root.speechBubbles = Boolean(cfg.speechBubbles)
             if (cfg.reactToCursor !== undefined) root.reactToCursor = Boolean(cfg.reactToCursor)
             if (cfg.reactToWindows !== undefined) root.reactToWindows = Boolean(cfg.reactToWindows)
+            if (cfg.reactToAgents !== undefined) root.reactToAgents = Boolean(cfg.reactToAgents)
             if (cfg.posX !== undefined && !root.isDragging) root.posX = Number(cfg.posX)
             if (cfg.posY !== undefined && !root.isDragging) root.posY = Number(cfg.posY)
           }
@@ -362,6 +364,7 @@ PanelWindow {
         speechBubbles: root.speechBubbles,
         reactToCursor: root.reactToCursor,
         reactToWindows: root.reactToWindows,
+        reactToAgents: root.reactToAgents,
         posX: Math.round(root.posX),
         posY: Math.round(root.posY)
       }
@@ -510,6 +513,17 @@ PanelWindow {
           }
           if (data.click) {
             root.onScreenClick(data.btn, data.x, data.y)
+          }
+          if (data.agent_event && root.reactToAgents && root.clippyEnabled) {
+            if (data.agent_event === "blocked") {
+              root.playAnimation("Alert")
+              root.speak(data.message || "Agent needs attention!")
+            } else if (data.agent_event === "done") {
+              root.playAnimation("Congratulate")
+              root.speak(data.message || "Agent finished successfully!")
+            } else if (data.agent_event === "working") {
+              root.playAnimation("GetTechy")
+            }
           }
         } catch (e) {}
       }
