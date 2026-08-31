@@ -22,7 +22,7 @@ Omaclippy brings the iconic 1997 Microsoft Office Assistant back to life as a mo
 
 ## 🚀 Installation
 
-### 1. Link or Clone to your Omarchy plugins directory:
+### 1. Clone the plugin to your Omarchy plugins directory:
 
 ```bash
 git clone https://github.com/jvlianodorneles/omaclippy.git ~/.config/omarchy/plugins/dorneles.omaclippy
@@ -36,12 +36,45 @@ omarchy-shell shell rescanPlugins
 omarchy restart shell
 ```
 
-### 3. Add to Status Bar (Optional):
+### 3. Add to Status Bar (Recommended):
 
-You can add the Clippy widget to your status bar by editing `~/.config/omarchy/shell.json` or running:
+Add `{"id": "dorneles.omaclippy"}` to your `bar.layout` in `~/.config/omarchy/shell.json` or run:
 
 ```bash
 omarchy bar move dorneles.omaclippy --section right
+```
+
+---
+
+## 🗑️ Uninstallation
+
+If you ever wish to remove Omaclippy:
+
+### 1. Remove from Status Bar:
+
+```bash
+omarchy bar remove dorneles.omaclippy
+```
+*(Or remove `"dorneles.omaclippy"` from `bar.layout` in `~/.config/omarchy/shell.json`)*
+
+### 2. Delete the plugin directory:
+
+```bash
+rm -rf ~/.config/omarchy/plugins/dorneles.omaclippy
+```
+
+### 3. Clean up saved state & configuration (Optional):
+
+```bash
+rm -rf ~/.local/state/omarchy/omaclippy
+```
+
+### 4. Reload Omarchy Shell:
+
+```bash
+omarchy-shell shell rescanPlugins
+# or
+omarchy restart shell
 ```
 
 ---
