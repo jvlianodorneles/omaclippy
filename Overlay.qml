@@ -34,9 +34,12 @@ PanelWindow {
   WlrLayershell.layer: WlrLayer.Top
   WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
 
-  // Input mask covers only Clippy and speech bubble so everything else is 100% click-through
+  // Input mask covers both Clippy and speech balloon so desktop is 100% click-through
   mask: Region {
-    item: root.clippyEnabled ? clippyWrapper : null
+    item: root.clippyEnabled ? clippyContainer : null
+    Region {
+      item: (root.clippyEnabled && root.speechVisible) ? bubbleItem : null
+    }
   }
 
   // -------------------------------------------------------------
@@ -404,7 +407,6 @@ PanelWindow {
     if (!root.reactToWindows || !root.clippyEnabled || root.isDragging) return
     if (root.clippyMode === "perch") {
       var targetX = rect.x + Math.max(10, rect.width - root.clippyWidth - 30)
-      // Keep slightly below the very top of the window so Clippy doesn't clip off screen
       var targetY = Math.max(20, rect.y - root.clippyHeight + 10)
       root.targetPosX = Math.max(10, Math.min(root.width - root.clippyWidth - 10, targetX))
       root.targetPosY = Math.max(20, Math.min(root.height - root.clippyHeight - 10, targetY))
@@ -566,7 +568,7 @@ PanelWindow {
   // Visual Item Hierarchy
   // -------------------------------------------------------------
   Item {
-    id: clippyWrapper
+    id: companionArea
     visible: root.clippyEnabled
     x: Math.max(0, Math.min(root.width - root.clippyWidth, root.posX))
     y: Math.max(0, Math.min(root.height - root.clippyHeight, root.posY))
