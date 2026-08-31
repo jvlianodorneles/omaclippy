@@ -10,35 +10,44 @@ usage() {
 Omaclippy CLI - Control your desktop Clippy companion
 
 Usage:
-  omaclippy <command> [args...]
+  omaclippy <command|animation> [message]
 
-Quick AI & Agent Actions:
-  omaclippy react <animation> [message]   Play animation with optional speech balloon
-  omaclippy thinking [message]            Trigger Thinking animation + message
-  omaclippy writing [message]             Trigger Writing animation + message
-  omaclippy techy [message]               Trigger GetTechy animation + message
-  omaclippy wizard [message]              Trigger GetWizardy animation + message
-  omaclippy artsy [message]               Trigger GetArtsy animation + message
-  omaclippy alert [message]               Trigger Alert animation + message
-  omaclippy done [message]                Trigger Congratulate/Wave celebration
+Direct Animation & Speech Triggers:
+  omaclippy tech [message]      Computer transformation (GetTechy)
+  omaclippy art [message]       Painter with palette (GetArtsy)
+  omaclippy write [message]     Writing on notepad (Writing)
+  omaclippy save [message]      Floppy disk save (Save)
+  omaclippy mail [message]      Paper airplane (SendMail)
+  omaclippy search [message]    Magnifying glass (Searching)
+  omaclippy print [message]     Matrix printer (Print)
+  omaclippy process [message]   Spinning gears (Processing)
+  omaclippy trash [message]     Trash can (EmptyTrash)
+  omaclippy atom [message]      Atomic orbit (IdleAtom)
+  omaclippy sleep [message]     Snooze / sleeping (IdleSnooze)
+  omaclippy thinking [message]  Thinking with question marks (Thinking)
+  omaclippy alert [message]     Warning screen tap (Alert)
+  omaclippy done [message]      Celebration checkmark (Congratulate)
+  omaclippy wave [message]      Waving hand (Wave)
+  omaclippy <AnyAnimation> [message]
 
 General Commands:
-  omaclippy play <animation>              Play specific animation (e.g. Wave, Save, Print)
-  omaclippy speak <text>                  Show speech balloon with text
-  omaclippy tip                           Show speech balloon with random retro tip
-  omaclippy toggle                        Toggle companion On / Off
-  omaclippy on                            Activate companion
-  omaclippy off                           Pause companion
-  omaclippy reset                         Reset Clippy position to default corner
-  omaclippy setScale <scale>              Change scale (small, normal, large, giant)
-  omaclippy setMode <mode>                Change mode (companion, roam, perch)
-  omaclippy status                        Display current JSON status
-  omaclippy mcp                           Run MCP Server for Claude / Antigravity
+  omaclippy react <anim> [text] Trigger any animation with speech balloon
+  omaclippy speak <text>        Show speech balloon with text
+  omaclippy play <animation>    Play specific animation
+  omaclippy tip                 Show speech balloon with random retro tip
+  omaclippy toggle              Toggle companion On / Off
+  omaclippy on                  Activate companion
+  omaclippy off                 Pause companion
+  omaclippy reset               Reset Clippy position to default corner
+  omaclippy setScale <scale>    Change scale (small, normal, large, giant)
+  omaclippy setMode <mode>      Change mode (companion, roam, perch)
+  omaclippy status              Display current JSON status
+  omaclippy mcp                 Run MCP Server for Claude / Antigravity
 
 Examples:
-  omaclippy speak "Looks like you're writing a shell script!"
-  omaclippy react GetTechy "Compiling Linux kernel..."
-  omaclippy done "All unit tests passed!"
+  omaclippy tech "Compilando no Arch Linux..."
+  omaclippy save "Commit gravado com sucesso!"
+  omaclippy done "Todos os testes passaram!"
 USAGE
 }
 
@@ -57,39 +66,11 @@ case "$cmd" in
     msg="${2:-}"
     omarchy-shell dorneles.omaclippy react "$anim" "$msg"
     ;;
-  thinking)
-    msg="${1:-Thinking...}"
-    omarchy-shell dorneles.omaclippy react Thinking "$msg"
-    ;;
-  writing)
-    msg="${1:-Writing code...}"
-    omarchy-shell dorneles.omaclippy react Writing "$msg"
-    ;;
-  techy)
-    msg="${1:-Processing tech stuff...}"
-    omarchy-shell dorneles.omaclippy react GetTechy "$msg"
-    ;;
-  wizard)
-    msg="${1:-Performing magic...}"
-    omarchy-shell dorneles.omaclippy react GetWizardy "$msg"
-    ;;
-  artsy)
-    msg="${1:-Creating something artistic...}"
-    omarchy-shell dorneles.omaclippy react GetArtsy "$msg"
-    ;;
-  alert)
-    msg="${1:-Attention needed!}"
-    omarchy-shell dorneles.omaclippy react Alert "$msg"
-    ;;
-  done)
-    msg="${1:-Task completed successfully!}"
-    omarchy-shell dorneles.omaclippy react Congratulate "$msg"
+  speak)
+    omarchy-shell dorneles.omaclippy speak "${1:-Hello!}"
     ;;
   play)
-    omarchy-shell dorneles.omaclippy play "$1"
-    ;;
-  speak)
-    omarchy-shell dorneles.omaclippy speak "$1"
+    omarchy-shell dorneles.omaclippy play "${1:-random}"
     ;;
   tip)
     omarchy-shell dorneles.omaclippy tip
@@ -119,8 +100,12 @@ case "$cmd" in
     exec python3 "$DIR/mcp_server.py"
     ;;
   *)
-    echo "Unknown command: $cmd" >&2
-    usage
-    exit 1
+    # Direct animation / alias invocation
+    if [[ $# -eq 0 ]]; then
+      omarchy-shell dorneles.omaclippy play "$cmd"
+    else
+      msg="$1"
+      omarchy-shell dorneles.omaclippy react "$cmd" "$msg"
+    fi
     ;;
 esac
