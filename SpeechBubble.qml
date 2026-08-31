@@ -18,22 +18,26 @@ Item {
   signal dismissed()
 
   // -------------------------------------------------------------
-  // Pre-calculated Dimensions using full text in advance
+  // Instant C++ Text Metrics (Guaranteed non-zero, no scene lag)
   // -------------------------------------------------------------
-  Text {
-    id: measureText
-    opacity: 0
-    visible: true
-    text: root.fullText
+  TextMetrics {
+    id: textMetrics
     font.pixelSize: 12
     font.weight: Font.Medium
-    wrapMode: Text.WordWrap
-    width: 220
+    text: root.fullText
   }
 
-  // Pre-calculated target dimensions
-  readonly property real calculatedWidth: Math.min(270, Math.max(140, measureText.paintedWidth + 48))
-  readonly property real calculatedHeight: Math.max(44, measureText.paintedHeight + 24)
+  readonly property real measuredLines: textMetrics.width > 200
+    ? Math.max(2, Math.ceil(textMetrics.width / 200))
+    : 1
+
+  readonly property real calculatedWidth: textMetrics.width > 200
+    ? 268
+    : Math.max(140, Math.min(268, Math.round(textMetrics.width + 48)))
+
+  readonly property real calculatedHeight: textMetrics.width > 200
+    ? Math.max(46, Math.round(measuredLines * 18 + 26))
+    : 44
 
   implicitWidth: calculatedWidth
   implicitHeight: calculatedHeight
@@ -95,14 +99,14 @@ Item {
   }
 
   // -------------------------------------------------------------
-  // Visual Bubble Rectangle (Rich nostalgic warm yellow)
+  // Visual Bubble Rectangle (Nostalgic warm yellow)
   // -------------------------------------------------------------
   Rectangle {
     id: bubbleRect
     anchors.fill: parent
     radius: 8
-    color: "#fef9c3" // Classic nostalgic vibrant warm yellow
-    border.color: "#ca8a04" // Crisp golden amber border
+    color: "#fef9c3" // Classic nostalgic warm yellow
+    border.color: "#ca8a04" // Golden amber border
     border.width: 1.5
 
     // Subtle drop shadow
@@ -153,7 +157,7 @@ Item {
       Text {
         id: messageText
         text: root.displayedText
-        color: "#1e293b" // Crisp dark readable text
+        color: "#1e293b"
         font.pixelSize: 12
         font.weight: Font.Medium
         wrapMode: Text.WordWrap

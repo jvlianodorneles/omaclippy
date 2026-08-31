@@ -34,12 +34,9 @@ PanelWindow {
   WlrLayershell.layer: WlrLayer.Top
   WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
 
-  // Input mask covers both Clippy and speech balloon so desktop is 100% click-through
+  // Input mask covers the companion area (enclosing Clippy and Speech Bubble)
   mask: Region {
-    item: root.clippyEnabled ? clippyContainer : null
-    Region {
-      item: (root.clippyEnabled && root.speechVisible) ? bubbleItem : null
-    }
+    item: root.clippyEnabled ? companionArea : null
   }
 
   // -------------------------------------------------------------
@@ -92,6 +89,26 @@ PanelWindow {
   property real pointerX: 0
   property real pointerY: 0
   property double lastCursorLookTime: 0
+
+  // Dynamic Bounding Geometry for Companion Area
+  readonly property real bubbleW: bubbleItem.width
+  readonly property real bubbleH: bubbleItem.height
+
+  readonly property real areaX: root.speechVisible
+    ? (root.showSpeechLeft ? root.posX : (root.posX - Math.max(0, root.bubbleW - root.clippyWidth)))
+    : root.posX
+
+  readonly property real areaY: root.speechVisible
+    ? (root.showSpeechBelow ? root.posY : (root.posY - root.bubbleH - 8))
+    : root.posY
+
+  readonly property real areaWidth: root.speechVisible
+    ? Math.max(root.clippyWidth, root.bubbleW)
+    : root.clippyWidth
+
+  readonly property real areaHeight: root.speechVisible
+    ? (root.clippyHeight + root.bubbleH + 8)
+    : root.clippyHeight
 
   // -------------------------------------------------------------
   // Centralized Animation Engine
@@ -570,12 +587,12 @@ PanelWindow {
   Item {
     id: companionArea
     visible: root.clippyEnabled
-    x: Math.max(0, Math.min(root.width - root.clippyWidth, root.posX))
-    y: Math.max(0, Math.min(root.height - root.clippyHeight, root.posY))
-    width: root.clippyWidth
-    height: root.clippyHeight
+    x: Math.max(0, Math.min(root.width - root.areaWidth, root.areaX))
+    y: Math.max(0, Math.min(root.height - root.areaHeight, root.areaY))
+    width: root.areaWidth
+    height: root.areaHeight
 
-    // Speech Bubble positioned with explicit coordinates (prevents QML anchor conflict/collapse)
+    // Speech Bubble positioned relative to companionArea
     SpeechBubble {
       id: bubbleItem
       clippyScale: root.scaleFactor
@@ -587,10 +604,10 @@ PanelWindow {
 
       x: root.showSpeechLeft
          ? 0
-         : (root.clippyWidth - width)
+         : (parent.width - width)
       y: root.showSpeechBelow
          ? (root.clippyHeight + 8)
-         : (-height - 8)
+         : 0
 
       onDismissed: root.hideSpeech()
     }
@@ -598,7 +615,14 @@ PanelWindow {
     // Clippy Body Container & Interaction
     Item {
       id: clippyContainer
-      anchors.fill: parent
+      x: root.showSpeechLeft
+         ? 0
+         : (parent.width - root.clippyWidth)
+      y: (root.speechVisible && !root.showSpeechBelow)
+         ? (root.bubbleH + 8)
+         : 0
+      width: root.clippyWidth
+      height: root.clippyHeight
 
       // Clippy Sprite rendering current frame
       Item {
