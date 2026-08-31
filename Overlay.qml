@@ -72,6 +72,10 @@ PanelWindow {
   readonly property real clippyWidth: Math.round(124 * root.scaleFactor)
   readonly property real clippyHeight: Math.round(93 * root.scaleFactor)
 
+  // Smart Speech Bubble Orientation
+  readonly property bool showSpeechBelow: root.posY < 130
+  readonly property bool showSpeechLeft: root.posX < 180
+
   // -------------------------------------------------------------
   // Position & Movement State
   // -------------------------------------------------------------
@@ -399,8 +403,11 @@ PanelWindow {
   function onWindowMoved(rect) {
     if (!root.reactToWindows || !root.clippyEnabled || root.isDragging) return
     if (root.clippyMode === "perch") {
-      root.targetPosX = rect.x + Math.max(20, rect.width - root.clippyWidth - 40)
-      root.targetPosY = Math.max(30, rect.y - root.clippyHeight + 10)
+      var targetX = rect.x + Math.max(10, rect.width - root.clippyWidth - 30)
+      // Keep slightly below the very top of the window so Clippy doesn't clip off screen
+      var targetY = Math.max(20, rect.y - root.clippyHeight + 10)
+      root.targetPosX = Math.max(10, Math.min(root.width - root.clippyWidth - 10, targetX))
+      root.targetPosY = Math.max(20, Math.min(root.height - root.clippyHeight - 10, targetY))
       moveAnimX.to = root.targetPosX
       moveAnimY.to = root.targetPosY
       moveAnim.restart()
@@ -566,17 +573,28 @@ PanelWindow {
     width: root.clippyWidth
     height: root.clippyHeight
 
-    // Speech Bubble floating above Clippy
+    // Speech Bubble with smart adaptive positioning (above vs below, left vs right)
     SpeechBubble {
       id: bubbleItem
       clippyScale: root.scaleFactor
       fullText: root.speechFullText
       displayedText: root.speechDisplayedText
       active: root.speechVisible
-      anchors.bottom: clippyContainer.top
-      anchors.bottomMargin: 8
-      anchors.right: clippyContainer.right
-      anchors.rightMargin: 10
+      placeBelow: root.showSpeechBelow
+      placeLeft: root.showSpeechLeft
+
+      anchors.top: root.showSpeechBelow ? clippyContainer.bottom : undefined
+      anchors.topMargin: root.showSpeechBelow ? 8 : 0
+
+      anchors.bottom: root.showSpeechBelow ? undefined : clippyContainer.top
+      anchors.bottomMargin: root.showSpeechBelow ? 0 : 8
+
+      anchors.right: root.showSpeechLeft ? undefined : clippyContainer.right
+      anchors.rightMargin: root.showSpeechLeft ? 0 : 10
+
+      anchors.left: root.showSpeechLeft ? clippyContainer.left : undefined
+      anchors.leftMargin: root.showSpeechLeft ? 10 : 0
+
       onDismissed: root.hideSpeech()
     }
 
@@ -630,10 +648,11 @@ PanelWindow {
           if (!pressed || mouse.buttons !== Qt.LeftButton) return
           var p = mapToItem(root.contentItem, mouse.x, mouse.y)
           if (!dragging) {
-            if (Math.abs(p.x - pressGlobalX) < 6 && Math.abs(p.y - pressGlobalY) < 6) return
-            dragging = true
-            root.isDragging = true
-            root.hideSpeech()
+            if (Math.abs(p.x - pressGlobalX) > 6 && Math.abs(p.y - pressGlobalY) > 6) {
+              dragging = true
+              root.isDragging = true
+              root.hideSpeech()
+            }
           }
           root.posX = Math.max(0, Math.min(root.width - root.clippyWidth, p.x - grabDx))
           root.posY = Math.max(0, Math.min(root.height - root.clippyHeight, p.y - grabDy))

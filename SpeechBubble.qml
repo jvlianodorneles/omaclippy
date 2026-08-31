@@ -12,11 +12,13 @@ Item {
   property string displayedText: ""
   property bool active: false
   property real clippyScale: 1.0
+  property bool placeBelow: false
+  property bool placeLeft: false
 
   signal dismissed()
 
-  implicitWidth: bubbleRect.implicitWidth + 24
-  implicitHeight: bubbleRect.implicitHeight + 20
+  implicitWidth: bubbleRect.implicitWidth
+  implicitHeight: bubbleRect.implicitHeight
 
   visible: opacity > 0.01
   opacity: active ? 1.0 : 0.0
@@ -79,8 +81,8 @@ Item {
     id: bubbleRect
     anchors.left: parent.left
     anchors.top: parent.top
-    implicitWidth: Math.min(320, Math.max(160, messageText.implicitWidth + 32))
-    implicitHeight: Math.max(50, messageText.implicitHeight + 28)
+    implicitWidth: Math.min(300, Math.max(150, messageText.implicitWidth + 36))
+    implicitHeight: Math.max(46, messageText.implicitHeight + 24)
     radius: 10
     color: "#fffbeb" // Classic soft warm parchment yellow
     border.color: "#d97706"
@@ -91,22 +93,26 @@ Item {
       z: -1
       anchors.fill: parent
       anchors.margins: -1
-      anchors.topMargin: 2
-      anchors.bottomMargin: -2
+      anchors.topMargin: root.placeBelow ? -2 : 2
+      anchors.bottomMargin: root.placeBelow ? 2 : -2
       radius: parent.radius
       color: "#000000"
       opacity: 0.15
     }
 
-    // Speech Tail (pointing down-right towards Clippy)
+    // Speech Tail
     Item {
       id: tail
-      anchors.bottom: parent.bottom
-      anchors.right: parent.right
-      anchors.rightMargin: 24
-      anchors.bottomMargin: -8
       width: 14
       height: 10
+      anchors.bottom: root.placeBelow ? undefined : parent.bottom
+      anchors.top: root.placeBelow ? parent.top : undefined
+      anchors.bottomMargin: root.placeBelow ? 0 : -8
+      anchors.topMargin: root.placeBelow ? -8 : 0
+      anchors.right: root.placeLeft ? undefined : parent.right
+      anchors.left: root.placeLeft ? parent.left : undefined
+      anchors.rightMargin: root.placeLeft ? 0 : 24
+      anchors.leftMargin: root.placeLeft ? 24 : 0
 
       // Tail triangle drawn with Canvas
       Canvas {
@@ -115,9 +121,17 @@ Item {
           var ctx = getContext("2d")
           ctx.clearRect(0, 0, width, height)
           ctx.beginPath()
-          ctx.moveTo(0, 0)
-          ctx.lineTo(width, 0)
-          ctx.lineTo(width / 2, height)
+          if (root.placeBelow) {
+            // Point UP
+            ctx.moveTo(0, height)
+            ctx.lineTo(width, height)
+            ctx.lineTo(width / 2, 0)
+          } else {
+            // Point DOWN
+            ctx.moveTo(0, 0)
+            ctx.lineTo(width, 0)
+            ctx.lineTo(width / 2, height)
+          }
           ctx.closePath()
           ctx.fillStyle = "#fffbeb"
           ctx.fill()
@@ -130,14 +144,14 @@ Item {
 
     RowLayout {
       anchors.fill: parent
-      anchors.margins: 10
-      spacing: 8
+      anchors.margins: 8
+      spacing: 6
 
       Text {
         id: messageText
         text: root.displayedText
         color: "#1e293b"
-        font.pixelSize: 13
+        font.pixelSize: 12
         font.weight: Font.Medium
         wrapMode: Text.WordWrap
         Layout.fillWidth: true
