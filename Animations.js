@@ -11028,6 +11028,11 @@ function getAnimation(name) {
     "congratulate": "Congratulate",
     "celebrate": "Congratulate",
     "party": "Congratulate",
+    "done": "Congratulate",
+    "finish": "Congratulate",
+    "finished": "Congratulate",
+    "success": "Congratulate",
+    "ok": "Congratulate",
     "sleep": "IdleSnooze",
     "snooze": "IdleSnooze",
     "zzz": "IdleSnooze",
@@ -11065,6 +11070,7 @@ function getAnimation(name) {
     "tap": "IdleFingerTap",
     "atom": "IdleAtom",
     "rope": "IdleRopePile",
+    "mobile": "IdleRopePile",
     "eyebrow": "IdleEyeBrowRaise"
   };
 
