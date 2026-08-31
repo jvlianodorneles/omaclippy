@@ -1,0 +1,92 @@
+function getAnimation(name) {
+  if (!name) return animations["RestPose"] || null;
+  if (animations[name]) return animations[name];
+
+  // Case-insensitive & common alias resolver
+  var clean = String(name).toLowerCase().replace(/[^a-z0-9]/g, "");
+
+  var aliases = {
+    "wizard": "GetWizardy",
+    "getwizard": "GetWizardy",
+    "getwizardy": "GetWizardy",
+    "merlin": "GetWizardy",
+    "magic": "GetWizardy",
+    "tech": "GetTechy",
+    "techy": "GetTechy",
+    "gettech": "GetTechy",
+    "gettechy": "GetTechy",
+    "computer": "GetTechy",
+    "art": "GetArtsy",
+    "artsy": "GetArtsy",
+    "getart": "GetArtsy",
+    "getartsy": "GetArtsy",
+    "painter": "GetArtsy",
+    "paint": "GetArtsy",
+    "write": "Writing",
+    "writing": "Writing",
+    "notepad": "Writing",
+    "congrat": "Congratulate",
+    "congrats": "Congratulate",
+    "congratulate": "Congratulate",
+    "celebrate": "Congratulate",
+    "party": "Congratulate",
+    "sleep": "IdleSnooze",
+    "snooze": "IdleSnooze",
+    "zzz": "IdleSnooze",
+    "goodbye": "GoodBye",
+    "bye": "GoodBye",
+    "greeting": "Greeting",
+    "greet": "Greeting",
+    "hi": "Greeting",
+    "hello": "Greeting",
+    "wave": "Wave",
+    "think": "Thinking",
+    "thinking": "Thinking",
+    "alert": "Alert",
+    "warn": "Alert",
+    "warning": "Alert",
+    "print": "Print",
+    "printer": "Print",
+    "save": "Save",
+    "disk": "Save",
+    "floppy": "Save",
+    "mail": "SendMail",
+    "sendmail": "SendMail",
+    "airplane": "SendMail",
+    "search": "Searching",
+    "searching": "Searching",
+    "find": "Searching",
+    "look": "Searching",
+    "process": "Processing",
+    "processing": "Processing",
+    "gear": "Processing",
+    "trash": "EmptyTrash",
+    "emptytrash": "EmptyTrash",
+    "delete": "EmptyTrash",
+    "scratch": "IdleHeadScratch",
+    "tap": "IdleFingerTap",
+    "atom": "IdleAtom",
+    "rope": "IdleRopePile",
+    "eyebrow": "IdleEyeBrowRaise"
+  };
+
+  if (aliases[clean] && animations[aliases[clean]]) {
+    return animations[aliases[clean]];
+  }
+
+  // Exact case-insensitive match
+  for (var k in animations) {
+    if (k.toLowerCase() === clean) {
+      return animations[k];
+    }
+  }
+
+  // Substring matching
+  for (var k in animations) {
+    if (k.toLowerCase().indexOf(clean) !== -1 || clean.indexOf(k.toLowerCase()) !== -1) {
+      return animations[k];
+    }
+  }
+
+  return animations["RestPose"] || null;
+}

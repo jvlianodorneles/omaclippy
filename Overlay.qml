@@ -578,6 +578,21 @@ PanelWindow {
       return "playing " + animName
     }
 
+    function react(animName: string, msg: string): string {
+      root.playAnimation(animName || "Explain")
+      if (msg && String(msg).trim().length > 0) {
+        root.speechFullText = String(msg)
+        root.speechDisplayedText = ""
+        root.speechVisible = true
+        root.speechTypewriterIdx = 0
+        typewriterTimer.restart()
+        var autoDuration = Math.max(5000, msg.length * 90)
+        autoCloseSpeechTimer.interval = autoDuration
+        autoCloseSpeechTimer.restart()
+      }
+      return "reacting"
+    }
+
     function speak(msg: string): string {
       root.speak(msg || "Hello!")
       return "speaking"
