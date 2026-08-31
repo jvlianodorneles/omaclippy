@@ -21,6 +21,10 @@ _omaclippy_precmd() {
     # Only react to commands that took longer than 8 seconds (e.g. builds, tests, downloads)
     if (( duration >= 8 )); then
       local base_cmd="${_omaclippy_last_cmd%% *}"
+      base_cmd="${base_cmd//[^a-zA-Z0-9_.-]/}"
+      if [[ -z "$base_cmd" ]]; then
+        base_cmd="Comando"
+      fi
       if (( exit_code == 0 )); then
         if command -v omaclippy >/dev/null 2>&1; then
           omaclippy done "${base_cmd} concluído com sucesso em ${duration}s!" >/dev/null 2>&1 &

@@ -109,12 +109,9 @@ def handle_call_tool(name, arguments):
         anim = sanitize_anim(arguments.get("animation", "Explain"))
         msg = sanitize_str(arguments.get("message"))
         
-        # Play animation
-        run_omarchy_cmd("play", anim)
-        
-        # Speak if message provided
+        # Atomic react invocation
+        run_omarchy_cmd("react", anim, msg)
         if msg:
-            run_omarchy_cmd("speak", msg)
             return {"content": [{"type": "text", "text": f"Clippy is now playing '{anim}' and saying: \"{msg}\""}]}
         return {"content": [{"type": "text", "text": f"Clippy is now playing '{anim}'"}]}
 
