@@ -12,7 +12,7 @@ Item {
   // Settings & Configuration
   // -------------------------------------------------------------
   property bool clippyEnabled: true
-  property string clippyMode: "companion" // "companion" | "roam" | "follow_cursor"
+  property string clippyMode: "companion" // "companion" | "roam" | "perch"
   property string clippyScale: "normal"  // "small" | "normal" | "large" | "giant"
   property bool soundEnabled: true
   property real soundVolume: 0.5
@@ -25,6 +25,7 @@ Item {
   readonly property string stateDir: Quickshell.env("HOME") + "/.local/state/omarchy/omaclippy"
   readonly property string stateFilePath: stateDir + "/config.json"
   readonly property string dirFs: Qt.resolvedUrl(".").toString().replace("file://", "")
+  readonly property string soundsDir: Qt.resolvedUrl("assets/sounds/").toString().replace("file://", "")
 
   // Scale Factors
   readonly property real scaleFactor: {
@@ -54,8 +55,166 @@ Item {
   property real pointerY: 0
   property double lastCursorLookTime: 0
 
+  // -------------------------------------------------------------
+  // Centralized Animation Engine
+  // -------------------------------------------------------------
   property string currentAnim: "RestPose"
+  property var currentAnimObj: AnimData.getAnimation("RestPose")
+  property int currentFrameIdx: 0
+  property real currentFrameX: 0
+  property real currentFrameY: 0
   property bool isCustomPlaying: false
+
+  // -------------------------------------------------------------
+  // Centralized Speech Bubble State
+  // -------------------------------------------------------------
+  property string speechFullText: ""
+  property string speechDisplayedText: ""
+  property bool speechVisible: false
+  property int speechTypewriterIdx: 0
+
+  function playSound(soundId) {
+    if (!root.soundEnabled || root.soundVolume <= 0 || !soundId) return
+    var filePath = root.soundsDir + soundId + ".mp3"
+    Quickshell.execDetached(["pw-play", "--volume", root.soundVolume.toFixed(2), filePath])
+  }
+
+  function applyFrame(idx) {
+    if (!root.currentAnimObj || !root.currentAnimObj.frames || root.currentAnimObj.frames.length === 0) return
+    if (idx < 0 || idx >= root.currentAnimObj.frames.length) return
+
+    var f = root.currentAnimObj.frames[idx]
+    root.currentFrameX = f.x
+    root.currentFrameY = f.y
+
+    if (f.sound) {
+      root.playSound(f.sound)
+    }
+
+    var dur = f.duration > 0 ? f.duration : 100
+    frameTimer.interval = dur
+    frameTimer.restart()
+  }
+
+  function advanceFrame() {
+    if (!root.currentAnimObj || !root.currentAnimObj.frames || root.currentAnimObj.frames.length === 0) return
+
+    var cur = root.currentAnimObj.frames[root.currentFrameIdx]
+    var nextIdx = root.currentFrameIdx + 1
+
+    if (cur.branching && cur.branching.branches && cur.branching.branches.length > 0) {
+      var roll = Math.random() * 100
+      var accum = 0
+      for (var i = 0; i < cur.branching.branches.length; i++) {
+        var branch = cur.branching.branches[i]
+        accum += (branch.weight || 0)
+        if (roll <= accum) {
+          nextIdx = branch.frameIndex
+          break
+        }
+      }
+    }
+
+    if (nextIdx >= root.currentAnimObj.frames.length) {
+      root.isCustomPlaying = false
+      root.currentAnim = "RestPose"
+      root.currentAnimObj = AnimData.getAnimation("RestPose")
+      root.currentFrameIdx = 0
+      root.applyFrame(0)
+    } else {
+      root.currentFrameIdx = nextIdx
+      root.applyFrame(root.currentFrameIdx)
+    }
+  }
+
+  Timer {
+    id: frameTimer
+    interval: 100
+    repeat: false
+    running: false
+    onTriggered: root.advanceFrame()
+  }
+
+  function playAnimation(animName) {
+    var anim = AnimData.getAnimation(animName)
+    if (!anim || !anim.frames || anim.frames.length === 0) {
+      root.currentAnim = "RestPose"
+      root.currentAnimObj = AnimData.getAnimation("RestPose")
+      root.currentFrameIdx = 0
+      root.applyFrame(0)
+      return
+    }
+
+    root.isCustomPlaying = (animName !== "RestPose")
+    root.currentAnim = animName
+    root.currentAnimObj = anim
+    root.currentFrameIdx = 0
+    root.applyFrame(0)
+  }
+
+  function playRandomAction() {
+    var anim = AnimData.getRandomActionAnimation()
+    root.playAnimation(anim)
+  }
+
+  function playRandomIdle() {
+    if (root.isCustomPlaying || root.isDragging) return
+    var anim = AnimData.getRandomIdleAnimation()
+    root.playAnimation(anim)
+  }
+
+  // -------------------------------------------------------------
+  // Speech Functions
+  // -------------------------------------------------------------
+  function speak(text, durationMs) {
+    if (!root.clippyEnabled || !root.speechBubbles) return
+    root.speechFullText = text
+    root.speechDisplayedText = ""
+    root.speechVisible = true
+    root.speechTypewriterIdx = 0
+    typewriterTimer.restart()
+
+    var autoDuration = durationMs || Math.max(5000, text.length * 90)
+    autoCloseSpeechTimer.interval = autoDuration
+    autoCloseSpeechTimer.restart()
+
+    if (!root.isCustomPlaying) {
+      root.playAnimation("Explain")
+    }
+  }
+
+  function hideSpeech() {
+    root.speechVisible = false
+    typewriterTimer.stop()
+    autoCloseSpeechTimer.stop()
+  }
+
+  function showRandomTip() {
+    var tip = AnimData.getRandomTip()
+    root.speak(tip)
+  }
+
+  Timer {
+    id: typewriterTimer
+    interval: 22
+    repeat: true
+    running: false
+    onTriggered: {
+      if (root.speechTypewriterIdx < root.speechFullText.length) {
+        root.speechTypewriterIdx += 1
+        root.speechDisplayedText = root.speechFullText.substring(0, root.speechTypewriterIdx)
+      } else {
+        typewriterTimer.stop()
+      }
+    }
+  }
+
+  Timer {
+    id: autoCloseSpeechTimer
+    repeat: false
+    running: false
+    onTriggered: root.hideSpeech()
+  }
 
   // -------------------------------------------------------------
   // Config Persistence
@@ -107,40 +266,6 @@ Item {
       }
       configFile.setText(JSON.stringify(cfg, null, 2) + "\n")
     } catch (e) {}
-  }
-
-  // -------------------------------------------------------------
-  // Animation & Speech Control
-  // -------------------------------------------------------------
-  function playAnimation(animName) {
-    root.isCustomPlaying = true
-    root.currentAnim = animName
-    clippySprite.play(animName, false)
-  }
-
-  function playRandomAction() {
-    var anim = AnimData.getRandomActionAnimation()
-    playAnimation(anim)
-  }
-
-  function playRandomIdle() {
-    if (root.isCustomPlaying || root.isDragging) return
-    var anim = AnimData.getRandomIdleAnimation()
-    root.currentAnim = anim
-    clippySprite.play(anim, false)
-  }
-
-  function speak(text, durationMs) {
-    if (!root.clippyEnabled || !root.speechBubbles) return
-    speechBubble.speak(text, durationMs)
-    if (!root.isCustomPlaying) {
-      playAnimation("Explain")
-    }
-  }
-
-  function showRandomTip() {
-    var tip = AnimData.getRandomTip()
-    speak(tip)
   }
 
   // Handle Idle Animation Timer
@@ -231,7 +356,7 @@ Item {
     var dy = y - centerY
     var dist = Math.hypot(dx, dy)
 
-    if (dist > 80 && dist < 700 && Math.random() < 0.12) {
+    if (dist > 80 && dist < 700 && Math.random() < 0.14) {
       root.lastCursorLookTime = now
       var lookAnim = "RestPose"
       if (Math.abs(dx) > Math.abs(dy) * 1.5) {
@@ -244,7 +369,7 @@ Item {
         else if (dx < 0 && dy > 0) lookAnim = "LookDownLeft"
         else lookAnim = "LookDownRight"
       }
-      playAnimation(lookAnim)
+      root.playAnimation(lookAnim)
     }
   }
 
@@ -264,7 +389,7 @@ Item {
     var dx = clickX - (root.posX + root.clippyWidth / 2)
     var dy = clickY - (root.posY + root.clippyHeight / 2)
     if (Math.hypot(dx, dy) < 180 && Math.random() < 0.25) {
-      playAnimation("Alert")
+      root.playAnimation("Alert")
     }
   }
 
@@ -353,7 +478,7 @@ Item {
     }
 
     function setMode(val: string): string {
-      if (["companion", "roam", "follow_cursor", "perch"].indexOf(val) !== -1) {
+      if (["companion", "roam", "perch"].indexOf(val) !== -1) {
         root.clippyMode = val
         root.saveConfig()
         return "ok"
@@ -406,7 +531,7 @@ Item {
         soundVolume: root.soundVolume,
         currentAnim: root.currentAnim,
         pos: [Math.round(root.posX), Math.round(root.posY)],
-        speechVisible: speechBubble.active
+        speechVisible: root.speechVisible
       })
     }
   }
@@ -438,11 +563,10 @@ Item {
         anchors { top: true; bottom: true; left: true; right: true }
 
         WlrLayershell.namespace: "omaclippy"
-        WlrLayershell.layer: WlrLayer.Overlay
+        WlrLayershell.layer: WlrLayer.Top
         WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
 
-        // Mask covers only Clippy and Speech Bubble for click/drag interactivity,
-        // leaving the entire desktop 100% click-through!
+        // Interactive mask strictly covers Clippy & speech bubble so desktop is 100% click-through
         mask: Region {
           item: screenScope.onThisScreen ? clippyWrapper : null
         }
@@ -460,12 +584,16 @@ Item {
 
             // Speech Bubble floating above Clippy
             SpeechBubble {
-              id: speechBubble
+              id: bubbleItem
               clippyScale: root.scaleFactor
+              fullText: root.speechFullText
+              displayedText: root.speechDisplayedText
+              active: root.speechVisible
               anchors.bottom: clippyContainer.top
               anchors.bottomMargin: 8
               anchors.right: clippyContainer.right
               anchors.rightMargin: 10
+              onDismissed: root.hideSpeech()
             }
 
             // Clippy Body Container & Interaction
@@ -473,17 +601,21 @@ Item {
               id: clippyContainer
               anchors.fill: parent
 
-              ClippySprite {
-                id: clippySprite
-                anchors.centerIn: parent
-                scaleFactor: root.scaleFactor
-                soundEnabled: root.soundEnabled
-                soundVolume: root.soundVolume
+              // Clippy Sprite rendering current frame
+              Item {
+                anchors.fill: parent
+                clip: true
 
-                onAnimationFinished: function(animName) {
-                  root.isCustomPlaying = false
-                  root.currentAnim = "RestPose"
-                  clippySprite.play("RestPose", true)
+                Image {
+                  id: spriteMap
+                  source: Qt.resolvedUrl("assets/map.png")
+                  x: -Math.round(root.currentFrameX * root.scaleFactor)
+                  y: -Math.round(root.currentFrameY * root.scaleFactor)
+                  width: Math.round(3348 * root.scaleFactor)
+                  height: Math.round(3162 * root.scaleFactor)
+                  smooth: true
+                  mipmap: true
+                  fillMode: Image.Stretch
                 }
               }
 
@@ -492,12 +624,14 @@ Item {
                 id: dragArea
                 anchors.fill: parent
                 hoverEnabled: true
+                acceptedButtons: Qt.LeftButton | Qt.RightButton
                 cursorShape: root.isDragging ? Qt.ClosedHandCursor : Qt.PointingHandCursor
 
                 property real pressGlobalX: 0
                 property real pressGlobalY: 0
                 property real grabDx: 0
                 property real grabDy: 0
+                property bool dragStarted: false
 
                 onPressed: function(mouse) {
                   var p = mapToItem(win.contentItem, mouse.x, mouse.y)
@@ -505,33 +639,39 @@ Item {
                   pressGlobalY = p.y
                   grabDx = p.x - screenScope.localX
                   grabDy = p.y - screenScope.localY
+                  dragStarted = false
                 }
 
                 onPositionChanged: function(mouse) {
-                  if (!pressed) return
+                  if (!pressed || mouse.buttons !== Qt.LeftButton) return
                   var p = mapToItem(win.contentItem, mouse.x, mouse.y)
-                  if (!root.isDragging) {
-                    if (Math.abs(p.x - pressGlobalX) > 6 || Math.abs(p.y - pressGlobalY) > 6) {
+                  if (!dragStarted) {
+                    if (Math.abs(p.x - pressGlobalX) > 4 || Math.abs(p.y - pressGlobalY) > 4) {
+                      dragStarted = true
                       root.isDragging = true
-                      speechBubble.hide()
+                      root.hideSpeech()
                     }
                   }
-                  if (root.isDragging) {
+                  if (dragStarted) {
                     root.posX = screenScope.modelData.x + (p.x - grabDx)
                     root.posY = screenScope.modelData.y + (p.y - grabDy)
                   }
                 }
 
                 onReleased: function(mouse) {
-                  if (root.isDragging) {
+                  if (dragStarted) {
+                    dragStarted = false
                     root.isDragging = false
                     root.saveConfig()
+                  }
+                }
+
+                onClicked: function(mouse) {
+                  if (dragStarted) return
+                  if (mouse.button === Qt.RightButton) {
+                    root.showRandomTip()
                   } else {
-                    if (mouse.button === Qt.RightButton) {
-                      root.showRandomTip()
-                    } else {
-                      root.playRandomAction()
-                    }
+                    root.playRandomAction()
                   }
                 }
               }
@@ -551,7 +691,7 @@ Item {
         root.posY = sc.y + sc.height - root.clippyHeight - 130
       }
     }
-    // Greet user on first load
+    root.applyFrame(0)
     Qt.callLater(function() {
       root.playAnimation("Greeting")
     })

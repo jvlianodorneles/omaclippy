@@ -11,7 +11,7 @@ import "Animations.js" as AnimData
 Panel {
   id: root
   moduleName: "dorneles.omaclippy"
-  ipcTarget: "dorneles.omaclippy"
+  ipcTarget: ""
   manageIpc: false
 
   property var anchorItem: null
@@ -376,7 +376,16 @@ Panel {
                 font.pixelSize: Style.font.body
                 clip: true
                 selectByMouse: true
-                placeholderText: "Type a message for Clippy..."
+
+                Text {
+                  anchors.fill: parent
+                  verticalAlignment: Text.AlignVCenter
+                  text: "Type a message for Clippy..."
+                  color: Util.alpha(root.foreground, 0.4)
+                  font.family: root.fontFamily
+                  font.pixelSize: Style.font.body
+                  visible: !customTextInput.text && !customTextInput.activeFocus
+                }
 
                 onAccepted: {
                   if (text.trim().length > 0) {
