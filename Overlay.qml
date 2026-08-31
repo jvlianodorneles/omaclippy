@@ -5,8 +5,39 @@ import Quickshell.Io
 import qs.Commons
 import "Animations.js" as AnimData
 
-Item {
+PanelWindow {
   id: root
+
+  // -------------------------------------------------------------
+  // Screen Selection & Window Anchors
+  // -------------------------------------------------------------
+  screen: {
+    var best = null
+    var screens = Quickshell.screens
+    for (var i = 0; i < screens.length; i++) {
+      if (!best || screens[i].width * screens[i].height > best.width * best.height)
+        best = screens[i]
+    }
+    return best
+  }
+
+  color: "transparent"
+  exclusionMode: ExclusionMode.Ignore
+  anchors {
+    top: true
+    bottom: true
+    left: true
+    right: true
+  }
+
+  WlrLayershell.namespace: "omaclippy"
+  WlrLayershell.layer: WlrLayer.Top
+  WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
+
+  // Input mask covers only Clippy and speech bubble so everything else is 100% click-through
+  mask: Region {
+    item: root.clippyEnabled ? clippyWrapper : null
+  }
 
   // -------------------------------------------------------------
   // Settings & Configuration
@@ -294,22 +325,14 @@ Item {
   // Roaming & Movement Physics
   // -------------------------------------------------------------
   function pickRoamTarget() {
-    var screens = Quickshell.screens
-    if (!screens || screens.length === 0) return
-    var sc = screens[0]
-    for (var i = 0; i < screens.length; i++) {
-      var s = screens[i]
-      if (root.posX >= s.x && root.posX <= s.x + s.width) { sc = s; break }
-    }
-
     var margin = 60
-    var maxX = sc.x + sc.width - root.clippyWidth - margin
-    var maxY = sc.y + sc.height - root.clippyHeight - margin
-    var minX = sc.x + margin
-    var minY = sc.y + margin
+    var maxX = root.width - root.clippyWidth - margin
+    var maxY = root.height - root.clippyHeight - margin
+    var minX = margin
+    var minY = margin
 
-    root.targetPosX = minX + Math.random() * (maxX - minX)
-    root.targetPosY = minY + Math.random() * (maxY - minY)
+    root.targetPosX = minX + Math.random() * Math.max(10, maxX - minX)
+    root.targetPosY = minY + Math.random() * Math.max(10, maxY - minY)
     root.isMoving = true
     moveAnimX.to = root.targetPosX
     moveAnimY.to = root.targetPosY
@@ -512,13 +535,9 @@ Item {
     }
 
     function resetPosition(): string {
-      var screens = Quickshell.screens
-      if (screens && screens.length > 0) {
-        var sc = screens[0]
-        root.posX = sc.x + sc.width - root.clippyWidth - 80
-        root.posY = sc.y + sc.height - root.clippyHeight - 120
-        root.saveConfig()
-      }
+      root.posX = root.width - root.clippyWidth - 80
+      root.posY = root.height - root.clippyHeight - 120
+      root.saveConfig()
       return "ok"
     }
 
@@ -537,144 +556,99 @@ Item {
   }
 
   // -------------------------------------------------------------
-  // Desktop Layer-Shell Overlay Windows (Per Screen)
+  // Visual Item Hierarchy
   // -------------------------------------------------------------
-  Variants {
-    model: Quickshell.screens
+  Item {
+    id: clippyWrapper
+    visible: root.clippyEnabled
+    x: Math.max(0, Math.min(root.width - root.clippyWidth, root.posX))
+    y: Math.max(0, Math.min(root.height - root.clippyHeight, root.posY))
+    width: root.clippyWidth
+    height: root.clippyHeight
 
-    Scope {
-      id: screenScope
-      required property var modelData
+    // Speech Bubble floating above Clippy
+    SpeechBubble {
+      id: bubbleItem
+      clippyScale: root.scaleFactor
+      fullText: root.speechFullText
+      displayedText: root.speechDisplayedText
+      active: root.speechVisible
+      anchors.bottom: clippyContainer.top
+      anchors.bottomMargin: 8
+      anchors.right: clippyContainer.right
+      anchors.rightMargin: 10
+      onDismissed: root.hideSpeech()
+    }
 
-      readonly property real localX: root.posX - modelData.x
-      readonly property real localY: root.posY - modelData.y
+    // Clippy Body Container & Interaction
+    Item {
+      id: clippyContainer
+      anchors.fill: parent
 
-      readonly property bool onThisScreen: root.clippyEnabled &&
-        (root.posX + root.clippyWidth >= modelData.x) &&
-        (root.posX <= modelData.x + modelData.width) &&
-        (root.posY + root.clippyHeight >= modelData.y) &&
-        (root.posY <= modelData.y + modelData.height)
+      // Clippy Sprite rendering current frame
+      Item {
+        anchors.fill: parent
+        clip: true
 
-      PanelWindow {
-        id: win
-        screen: screenScope.modelData
-        color: "transparent"
-        exclusionMode: ExclusionMode.Ignore
-        anchors { top: true; bottom: true; left: true; right: true }
+        Image {
+          id: spriteMap
+          source: Qt.resolvedUrl("assets/map.png")
+          x: -Math.round(root.currentFrameX * root.scaleFactor)
+          y: -Math.round(root.currentFrameY * root.scaleFactor)
+          width: Math.round(3348 * root.scaleFactor)
+          height: Math.round(3162 * root.scaleFactor)
+          smooth: true
+          mipmap: true
+          fillMode: Image.Stretch
+        }
+      }
 
-        WlrLayershell.namespace: "omaclippy"
-        WlrLayershell.layer: WlrLayer.Top
-        WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
+      // Drag & Click Interaction Area
+      MouseArea {
+        id: dragArea
+        anchors.fill: parent
+        hoverEnabled: true
+        acceptedButtons: Qt.LeftButton | Qt.RightButton
+        cursorShape: root.isDragging ? Qt.ClosedHandCursor : Qt.PointingHandCursor
 
-        // Interactive mask strictly covers Clippy & speech bubble so desktop is 100% click-through
-        mask: Region {
-          item: screenScope.onThisScreen ? clippyWrapper : null
+        property real grabDx: 0
+        property real grabDy: 0
+        property real pressGlobalX: 0
+        property real pressGlobalY: 0
+        property bool dragging: false
+
+        onPressed: function(mouse) {
+          var p = mapToItem(root.contentItem, mouse.x, mouse.y)
+          pressGlobalX = p.x
+          pressGlobalY = p.y
+          grabDx = p.x - root.posX
+          grabDy = p.y - root.posY
+          dragging = false
         }
 
-        Item {
-          anchors.fill: parent
+        onPositionChanged: function(mouse) {
+          if (!pressed || mouse.buttons !== Qt.LeftButton) return
+          var p = mapToItem(root.contentItem, mouse.x, mouse.y)
+          if (!dragging) {
+            if (Math.abs(p.x - pressGlobalX) < 6 && Math.abs(p.y - pressGlobalY) < 6) return
+            dragging = true
+            root.isDragging = true
+            root.hideSpeech()
+          }
+          root.posX = Math.max(0, Math.min(root.width - root.clippyWidth, p.x - grabDx))
+          root.posY = Math.max(0, Math.min(root.height - root.clippyHeight, p.y - grabDy))
+        }
 
-          Item {
-            id: clippyWrapper
-            visible: screenScope.onThisScreen
-            x: screenScope.localX
-            y: screenScope.localY
-            width: root.clippyWidth
-            height: root.clippyHeight
-
-            // Speech Bubble floating above Clippy
-            SpeechBubble {
-              id: bubbleItem
-              clippyScale: root.scaleFactor
-              fullText: root.speechFullText
-              displayedText: root.speechDisplayedText
-              active: root.speechVisible
-              anchors.bottom: clippyContainer.top
-              anchors.bottomMargin: 8
-              anchors.right: clippyContainer.right
-              anchors.rightMargin: 10
-              onDismissed: root.hideSpeech()
-            }
-
-            // Clippy Body Container & Interaction
-            Item {
-              id: clippyContainer
-              anchors.fill: parent
-
-              // Clippy Sprite rendering current frame
-              Item {
-                anchors.fill: parent
-                clip: true
-
-                Image {
-                  id: spriteMap
-                  source: Qt.resolvedUrl("assets/map.png")
-                  x: -Math.round(root.currentFrameX * root.scaleFactor)
-                  y: -Math.round(root.currentFrameY * root.scaleFactor)
-                  width: Math.round(3348 * root.scaleFactor)
-                  height: Math.round(3162 * root.scaleFactor)
-                  smooth: true
-                  mipmap: true
-                  fillMode: Image.Stretch
-                }
-              }
-
-              // Drag & Click Interaction Area
-              MouseArea {
-                id: dragArea
-                anchors.fill: parent
-                hoverEnabled: true
-                acceptedButtons: Qt.LeftButton | Qt.RightButton
-                cursorShape: root.isDragging ? Qt.ClosedHandCursor : Qt.PointingHandCursor
-
-                property real pressGlobalX: 0
-                property real pressGlobalY: 0
-                property real grabDx: 0
-                property real grabDy: 0
-                property bool dragStarted: false
-
-                onPressed: function(mouse) {
-                  var p = mapToItem(win.contentItem, mouse.x, mouse.y)
-                  pressGlobalX = p.x
-                  pressGlobalY = p.y
-                  grabDx = p.x - screenScope.localX
-                  grabDy = p.y - screenScope.localY
-                  dragStarted = false
-                }
-
-                onPositionChanged: function(mouse) {
-                  if (!pressed || mouse.buttons !== Qt.LeftButton) return
-                  var p = mapToItem(win.contentItem, mouse.x, mouse.y)
-                  if (!dragStarted) {
-                    if (Math.abs(p.x - pressGlobalX) > 4 || Math.abs(p.y - pressGlobalY) > 4) {
-                      dragStarted = true
-                      root.isDragging = true
-                      root.hideSpeech()
-                    }
-                  }
-                  if (dragStarted) {
-                    root.posX = screenScope.modelData.x + (p.x - grabDx)
-                    root.posY = screenScope.modelData.y + (p.y - grabDy)
-                  }
-                }
-
-                onReleased: function(mouse) {
-                  if (dragStarted) {
-                    dragStarted = false
-                    root.isDragging = false
-                    root.saveConfig()
-                  }
-                }
-
-                onClicked: function(mouse) {
-                  if (dragStarted) return
-                  if (mouse.button === Qt.RightButton) {
-                    root.showRandomTip()
-                  } else {
-                    root.playRandomAction()
-                  }
-                }
-              }
+        onReleased: function(mouse) {
+          if (dragging) {
+            dragging = false
+            root.isDragging = false
+            root.saveConfig()
+          } else {
+            if (mouse.button === Qt.RightButton) {
+              root.showRandomTip()
+            } else {
+              root.playRandomAction()
             }
           }
         }
@@ -683,13 +657,11 @@ Item {
   }
 
   Component.onCompleted: {
-    var screens = Quickshell.screens
-    if (screens && screens.length > 0) {
-      var sc = screens[0]
-      if (root.posX === 350 && root.posY === 350) {
-        root.posX = sc.x + sc.width - root.clippyWidth - 90
-        root.posY = sc.y + sc.height - root.clippyHeight - 130
-      }
+    if (root.posX === 350 && root.posY === 350) {
+      var w = root.width > 0 ? root.width : 1920
+      var h = root.height > 0 ? root.height : 1080
+      root.posX = w - root.clippyWidth - 90
+      root.posY = h - root.clippyHeight - 130
     }
     root.applyFrame(0)
     Qt.callLater(function() {

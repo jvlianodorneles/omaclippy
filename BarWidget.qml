@@ -53,14 +53,6 @@ BarWidget {
     if (panelLoader.item) panelLoader.item.closeForPopoutSwitch()
   }
 
-  IpcHandler {
-    target: "dorneles.omaclippy-panel"
-
-    function toggle(): void { root.toggle() }
-    function open(): void { root.open() }
-    function close(): void { root.close() }
-  }
-
   onBarChanged: Qt.callLater(injectPanel)
   onSettingsChanged: Qt.callLater(injectPanel)
   Component.onCompleted: Qt.callLater(injectPanel)
