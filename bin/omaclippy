@@ -46,9 +46,9 @@ General Commands:
   omaclippy mcp                 Run MCP Server for Claude / Antigravity
 
 Examples:
-  omaclippy tech "Compilando no Arch Linux..."
-  omaclippy save "Commit gravado com sucesso!"
-  omaclippy done "Todos os testes passaram!"
+  omaclippy tech "Compiling project on Arch Linux..."
+  omaclippy save "Commit saved to disk!"
+  omaclippy done "All tests passed successfully!"
 USAGE
 }
 

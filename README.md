@@ -133,8 +133,8 @@ Add to your MCP settings or plugin configuration:
 
 Omaclippy monitors [Herdr](https://github.com/fabean/herdr) agent states in real time:
 - **Agent `working`:** Clippy plays `GetTechy` / `Writing` animation.
-- **Agent `blocked` (needs user input):** Clippy plays `Alert` with retro warning sound and displays: *"⚠️ Agente 'worker-1' está bloqueado e aguarda sua resposta!"*.
-- **Agent `done` (completed task):** Clippy plays `Congratulate` / `Wave` with celebration audio: *"🎉 Agente 'worker-1' concluiu sua tarefa com sucesso!"*.
+- **Agent `blocked` (needs user input):** Clippy plays `Alert` with retro warning sound and displays: *"⚠️ Agent 'worker-1' is blocked and waiting for your response!"*.
+- **Agent `done` (completed task):** Clippy plays `Congratulate` / `Wave` with celebration audio: *"🎉 Agent 'worker-1' completed task successfully!"*.
 
 *Toggle this feature on/off anytime in the Control Panel under Settings ➔ "AI Agents (Herdr)".*
 
@@ -177,15 +177,15 @@ You can control Clippy directly from terminal commands or scripts:
 omaclippy prompt
 
 # Quick agent status triggers
-omaclippy thinking "Analisando dependências do projeto..."
-omaclippy writing "Refatorando arquivos QML..."
-omaclippy techy "Executando testes automatizados..."
-omaclippy wizard "Executando migração de banco de dados..."
-omaclippy alert "Erro encontrado nos testes!"
-omaclippy done "Build finalizado com sucesso!"
+omaclippy thinking "Analyzing project dependencies..."
+omaclippy writing "Refactoring QML components..."
+omaclippy techy "Running automated test suites..."
+omaclippy wizard "Executing database migrations..."
+omaclippy alert "Test failure detected!"
+omaclippy done "Build completed successfully!"
 
 # Speech & animations
-omaclippy speak "Parece que você está codificando no Arch Linux!"
+omaclippy speak "It looks like you're coding on Arch Linux!"
 omaclippy play Congratulate
 omaclippy tip
 ```
@@ -197,7 +197,7 @@ omaclippy tip
 Ready-to-use hooks are provided in the `hooks/` directory:
 
 1. **Git Post-Commit Hook (`hooks/git-post-commit`):**
-   - Plays the `Save` (floppy disk) animation and shows your commit message.
+   - Plays the `Save` animation and shows your commit message.
    - Copy to `.git/hooks/post-commit` or configure globally.
 
 2. **Git Pre-Push Hook (`hooks/git-pre-push`):**
@@ -257,86 +257,86 @@ Below is the complete, frame-by-frame verified catalogue of all 43 authentic Mic
 
 ### 📦 1. Tools, Actions & Transformations
 
-| CLI Command | Canonical Name | Aliases | Duração | Áudio | Comportamento Visual Exato |
+| CLI Command | Canonical Name | Aliases | Duration | Audio | Exact Visual Behavior |
 |---|---|---|:---:|:---:|---|
-| `omaclippy save [msg]` | `Save` | `disk`, `floppy` | 5.53s | 🔊 | Transforma-se em um **suporte de arame com folha de caderno pautada** que desliza para dentro e para fora. |
-| `omaclippy print [msg]` | `Print` | `printer` | 8.40s | 🔊 | Transforma-se em uma **folha pautada que rola e ondula** como se passasse por uma prensa de papel. |
-| `omaclippy mail [msg]` | `SendMail` | `email`, `airplane` | 6.80s | 🔊 | Dobra-se em formato de um **pequeno aviãozinho de papel** e voa para fora da tela. |
-| `omaclippy write [msg]` | `Writing` | `notepad` | 8.40s | 🔊 | Segura uma **folhinha amarela** e anota rapidamente com uma caneta/lápis vermelho. |
-| `omaclippy search [msg]` | `Searching` | `find`, `look` | 8.10s | 🔊 | Puxa uma **luneta / telescópio retrô com suporte** e espia através dela inspecionando a tela. |
-| `omaclippy trash [msg]` | `EmptyTrash` | `delete` | 5.00s | 🔊 | Transforma-se em um **redemoinho / tornado de arame em espiral** que suga e tritura uma folha de papel. |
-| `omaclippy process [msg]` | `Processing` | `gear` | 3.80s | 🔊 | Transforma-se em uma **pázinha/concha** que joga e apara um potinho de papel. |
-| `omaclippy done [msg]` | `Congratulate` | `congrats`, `celebrate`, `ok`, `success`, `finish` | 3.68s | 🔊 | Desdobra-se e transforma-se no **símbolo de V / Checkmark verde brilhante** com faíscas estelares mágicas. |
+| `omaclippy save [msg]` | `Save` | `disk`, `floppy` | 5.53s | 🔊 | Morphs into a **wire document holder with a lined notebook page** sliding in and out. |
+| `omaclippy print [msg]` | `Print` | `printer` | 8.40s | 🔊 | Morphs into a **lined sheet of paper rolling and waving** as if through a paper press. |
+| `omaclippy mail [msg]` | `SendMail` | `email`, `airplane` | 6.80s | 🔊 | Folds into a **paper airplane** and flies off across the screen. |
+| `omaclippy write [msg]` | `Writing` | `notepad` | 8.40s | 🔊 | Holds a **yellow notepad pad** and writes rapidly with a red pen/pencil. |
+| `omaclippy search [msg]` | `Searching` | `find`, `look` | 8.10s | 🔊 | Pulls out a **vintage spyglass / telescope on a stand** and peers through it. |
+| `omaclippy trash [msg]` | `EmptyTrash` | `delete` | 5.00s | 🔊 | Spins into a **wire tornado / spiral vortex** that shreds and swallows a paper page. |
+| `omaclippy process [msg]` | `Processing` | `gear` | 3.80s | 🔊 | Morphs into a **scoop / paddle** that juggles and catches a small paper cup. |
+| `omaclippy done [msg]` | `Congratulate` | `congrats`, `celebrate`, `ok`, `success`, `finish` | 3.68s | 🔊 | Unfolds and morphs into a **glowing green Checkmark (V)** with magical twinkling sparkles. |
 
 ---
 
 ### 👋 2. Greetings, Expressions & Alarms
 
-| CLI Command | Canonical Name | Aliases | Duração | Áudio | Comportamento Visual Exato |
+| CLI Command | Canonical Name | Aliases | Duration | Audio | Exact Visual Behavior |
 |---|---|---|:---:|:---:|---|
-| `omaclippy wave [msg]` | `Wave` | - | 4.90s | 🔊 | Sorri e **acena alegremente com a mão** para o usuário. |
-| `omaclippy greeting [msg]` | `Greeting` | `greet`, `hi`, `hello` | 4.45s | 🔊 | Surge **girando em espiral e se desdobra** na tela como Clippy. |
-| `omaclippy goodbye [msg]` | `GoodBye` | `bye` | 4.45s | 🔊 | **Acena em despedida e desaparece** girando para fora da tela. |
-| `omaclippy alert [msg]` | `Alert` | `warn`, `warning` | 2.40s | 🔊 | **Bate repetidamente com as duas mãos no vidro da tela** chamando atenção urgente. |
-| `omaclippy attention [msg]` | `GetAttention` | - | 2.65s | 🔊 | Inclina-se sobre um **tapete/folha amarela** e bate com a cabeça e os olhos. |
-| `omaclippy thinking [msg]` | `Thinking` | `think` | 4.50s | 🔊 | Transforma o corpo em um **modelo atômico com 3 anéis orbitais e elétrons girando**. |
-| `omaclippy explain [msg]` | `Explain` | - | 1.50s | - | Abre os dois braços lateralmente gesticulando como quem explica. |
-| `omaclippy hearing [msg]` | `Hearing_1` | `listen` | 5.40s | 🔊 | Coloca a **mão curvada atrás da orelha** para escutar com atenção. |
-| `omaclippy check [msg]` | `CheckingSomething` | - | 6.64s | 🔊 | Inclina-se para a frente e **examina o chão/mesa com curiosidade**. |
+| `omaclippy wave [msg]` | `Wave` | - | 4.90s | 🔊 | Smiles and **happily waves a hand** to the user. |
+| `omaclippy greeting [msg]` | `Greeting` | `greet`, `hi`, `hello` | 4.45s | 🔊 | Spins in from a **spiral and unfolds** onto the screen as Clippy. |
+| `omaclippy goodbye [msg]` | `GoodBye` | `bye` | 4.45s | 🔊 | **Waves farewell and vanishes** by spinning out of the screen. |
+| `omaclippy alert [msg]` | `Alert` | `warn`, `warning` | 2.40s | 🔊 | **Repeatedly knocks with both hands on the glass screen** demanding urgent attention. |
+| `omaclippy attention [msg]` | `GetAttention` | - | 2.65s | 🔊 | Leans down on a **yellow paper mat** and taps head/eyes to be noticed. |
+| `omaclippy thinking [msg]` | `Thinking` | `think` | 4.50s | 🔊 | Morphs body into an **atomic model with 3 orbital rings and spinning electrons**. |
+| `omaclippy explain [msg]` | `Explain` | - | 1.50s | - | Opens both arms wide gesturing as if explaining a concept. |
+| `omaclippy hearing [msg]` | `Hearing_1` | `listen` | 5.40s | 🔊 | Places a **cupped hand behind the ear** listening attentively. |
+| `omaclippy check [msg]` | `CheckingSomething` | - | 6.64s | 🔊 | Leans forward and **curiously inspects the desktop floor**. |
 
 ---
 
 ### ⏳ 3. Idles & Postures
 
-| CLI Command | Canonical Name | Aliases | Duração | Áudio | Comportamento Visual Exato |
+| CLI Command | Canonical Name | Aliases | Duration | Audio | Exact Visual Behavior |
 |---|---|---|:---:|:---:|---|
-| `omaclippy sleep [msg]` | `IdleSnooze` | `snooze`, `zzz` | 13.60s | - | Apoia a cabeça, **dorme profundamente e solta letras (*Zzz*)**. |
-| `omaclippy atom [msg]` | `IdleAtom` | - | 4.50s | - | Transforma-se no **átomo com 3 anéis giratórios**. |
-| `omaclippy mobile [msg]` | `IdleRopePile` | `rope` | 7.50s | - | Desmancha-se como um **móbile / novelo de cordas soltas penduradas** e se puxa de volta. |
-| `omaclippy tap [msg]` | `IdleFingerTap` | - | 1.15s | - | Bate os dedos no chão impacientemente. |
-| `omaclippy scratch [msg]` | `IdleHeadScratch` | - | 1.90s | - | Coça o topo da cabeça com expressão de dúvida. |
-| `omaclippy eyebrow [msg]` | `IdleEyeBrowRaise`| - | 1.50s | - | Ergue a sobrancelha esquerda desconfiado. |
-| `omaclippy sidetoside [msg]` | `IdleSideToSide` | - | 5.60s | - | Balança suavemente o corpo e os olhos de um lado para o outro. |
-| `omaclippy idle [msg]` | `Idle1_1` | - | 7.30s | - | Respiração natural e piscar de olhos. |
-| `omaclippy rest` | `RestPose` | - | 0.10s | - | Pose neutra clássica de repouso. |
+| `omaclippy sleep [msg]` | `IdleSnooze` | `snooze`, `zzz` | 13.60s | - | Rests head on hands, **falls fast asleep, and snores with floating (*Zzz*)**. |
+| `omaclippy atom [msg]` | `IdleAtom` | - | 4.50s | - | Transforms into the **atom with 3 rotating orbital rings**. |
+| `omaclippy mobile [msg]` | `IdleRopePile` | `rope` | 7.50s | - | Unravels into a **hanging mobile of loose wire strings** and pulls itself back up. |
+| `omaclippy tap [msg]` | `IdleFingerTap` | - | 1.15s | - | Impatiently taps fingers on the ground. |
+| `omaclippy scratch [msg]` | `IdleHeadScratch` | - | 1.90s | - | Scratches the top of the head with a puzzled look. |
+| `omaclippy eyebrow [msg]` | `IdleEyeBrowRaise`| - | 1.50s | - | Inquisitively raises the left eyebrow. |
+| `omaclippy sidetoside [msg]` | `IdleSideToSide` | - | 5.60s | - | Gently sways body and eyes from side to side. |
+| `omaclippy idle [msg]` | `Idle1_1` | - | 7.30s | - | Natural breathing and eye blinking. |
+| `omaclippy rest` | `RestPose` | - | 0.10s | - | Classic neutral resting posture. |
 
 ---
 
-### 👉 4. Gestos e Apontadores
+### 👉 4. Gestures & Pointers
 
-| CLI Command | Canonical Name | Duração | Comportamento Visual |
+| CLI Command | Canonical Name | Duration | Exact Visual Behavior |
 |---|---|:---:|---|
-| `omaclippy play GestureUp` | `GestureUp` | 2.80s | Estica o braço e aponta para cima. |
-| `omaclippy play GestureDown` | `GestureDown` | 2.25s | Estica o braço e aponta para baixo. |
-| `omaclippy play GestureLeft` | `GestureLeft` | 3.05s | Estica o braço e aponta para a esquerda. |
-| `omaclippy play GestureRight` | `GestureRight` | 3.25s | Estica o braço e aponta para a direita. |
+| `omaclippy play GestureUp` | `GestureUp` | 2.80s | Extends arm and points upward. |
+| `omaclippy play GestureDown` | `GestureDown` | 2.25s | Extends arm and points downward. |
+| `omaclippy play GestureLeft` | `GestureLeft` | 3.05s | Extends arm and points to the left. |
+| `omaclippy play GestureRight` | `GestureRight` | 3.25s | Extends arm and points to the right. |
 
 ---
 
-### 👀 5. Rastreamento de Olhar do Cursor (8 Direções)
+### 👀 5. Directional Cursor Look Glances (8 Directions)
 
-| CLI Command | Canonical Name | Duração | Comportamento Visual |
+| CLI Command | Canonical Name | Duration | Exact Visual Behavior |
 |---|---|:---:|---|
-| `omaclippy play LookUp` | `LookUp` | 1.80s | Olha para cima na tela. |
-| `omaclippy play LookDown` | `LookDown` | 1.80s | Olha para baixo na tela. |
-| `omaclippy play LookRight` | `LookRight` | 1.80s | Olha para o lado esquerdo da tela. |
-| `omaclippy play LookLeft` | `LookLeft` | 1.80s | Olha para o lado direito da tela. |
-| `omaclippy play LookUpRight` | `LookUpRight` | 1.80s | Olha para a diagonal superior esquerda. |
-| `omaclippy play LookUpLeft` | `LookUpLeft` | 1.80s | Olha para a diagonal superior direita. |
-| `omaclippy play LookDownRight` | `LookDownRight` | 1.80s | Olha para a diagonal inferior esquerda. |
-| `omaclippy play LookDownLeft` | `LookDownLeft` | 1.80s | Olha para a diagonal inferior direita. |
+| `omaclippy play LookUp` | `LookUp` | 1.80s | Glances toward the top of the screen. |
+| `omaclippy play LookDown` | `LookDown` | 1.80s | Glances toward the bottom of the screen. |
+| `omaclippy play LookRight` | `LookRight` | 1.80s | Glances toward the left side of the screen. |
+| `omaclippy play LookLeft` | `LookLeft` | 1.80s | Glances toward the right side of the screen. |
+| `omaclippy play LookUpRight` | `LookUpRight` | 1.80s | Glances toward the top-left diagonal of the screen. |
+| `omaclippy play LookUpLeft` | `LookUpLeft` | 1.80s | Glances toward the top-right diagonal of the screen. |
+| `omaclippy play LookDownRight` | `LookDownRight` | 1.80s | Glances toward the bottom-left diagonal of the screen. |
+| `omaclippy play LookDownLeft` | `LookDownLeft` | 1.80s | Glances toward the bottom-right diagonal of the screen. |
 
 ---
 
-### 🎭 6. Nomes Herdados da API MS Agent & Transições
+### 🎭 6. Legacy MS Agent API Names & Transitions
 
-| CLI Command | Canonical Name | Aliases | Duração | Áudio | Comportamento Visual |
+| CLI Command | Canonical Name | Aliases | Duration | Audio | Exact Visual Behavior |
 |---|---|---|:---:|:---:|---|
-| `omaclippy wizard [msg]` | `GetWizardy` | `wizardry`, `magic`, `merlin` | 3.68s | 🔊 | *(Nome herdado da API)* Transforma-se no Checkmark mágico com faíscas. |
-| `omaclippy tech [msg]` | `GetTechy` | `techy`, `gettech` | 4.50s | 🔊 | *(Nome herdado da API)* Transforma-se no átomo com efeito sonoro de tecnologia. |
-| `omaclippy art [msg]` | `GetArtsy` | `artsy`, `getart`, `painter` | 4.90s | 🔊 | *(Nome herdado da API)* Desmancha-se como móbile / novelo de cordas. |
-| `omaclippy play Hide` | `Hide` | - | 0.05s | - | Transição de recolher e ocultar. |
-| `omaclippy play Show` | `Show` | - | 0.05s | - | Transição de desdobrar e surgir. |
+| `omaclippy wizard [msg]` | `GetWizardy` | `wizardry`, `magic`, `merlin` | 3.68s | 🔊 | *(Legacy API name)* Unfolds into the glowing green checkmark with magical sparkles. |
+| `omaclippy tech [msg]` | `GetTechy` | `techy`, `gettech` | 4.50s | 🔊 | *(Legacy API name)* Morphs into the atom with technology sound effect. |
+| `omaclippy art [msg]` | `GetArtsy` | `artsy`, `getart`, `painter` | 4.90s | 🔊 | *(Legacy API name)* Unravels into the hanging mobile of loose wire strings. |
+| `omaclippy play Hide` | `Hide` | - | 0.05s | - | Quick transition collapsing and hiding. |
+| `omaclippy play Show` | `Show` | - | 0.05s | - | Quick transition expanding and appearing. |
 
 ---
 

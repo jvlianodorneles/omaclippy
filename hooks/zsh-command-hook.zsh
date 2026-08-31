@@ -23,15 +23,15 @@ _omaclippy_precmd() {
       local base_cmd="${_omaclippy_last_cmd%% *}"
       base_cmd="${base_cmd//[^a-zA-Z0-9_.-]/}"
       if [[ -z "$base_cmd" ]]; then
-        base_cmd="Comando"
+        base_cmd="Command"
       fi
       if (( exit_code == 0 )); then
         if command -v omaclippy >/dev/null 2>&1; then
-          omaclippy done "${base_cmd} concluído com sucesso em ${duration}s!" >/dev/null 2>&1 &
+          omaclippy done "${base_cmd} completed successfully in ${duration}s!" >/dev/null 2>&1 &
         fi
       else
         if command -v omaclippy >/dev/null 2>&1; then
-          omaclippy alert "Erro ao executar ${base_cmd} (código ${exit_code}) após ${duration}s!" >/dev/null 2>&1 &
+          omaclippy alert "Error running ${base_cmd} (exit code ${exit_code}) after ${duration}s!" >/dev/null 2>&1 &
         fi
       fi
     fi
