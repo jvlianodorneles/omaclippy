@@ -31,6 +31,7 @@ Direct Animation & Speech Triggers:
   omaclippy <AnyAnimation> [message]
 
 General Commands:
+  omaclippy prompt              Open interactive mini floating AI prompt
   omaclippy react <anim> [text] Trigger any animation with speech balloon
   omaclippy speak <text>        Show speech balloon with text
   omaclippy play <animation>    Play specific animation
@@ -65,6 +66,9 @@ case "$cmd" in
     anim="${1:-Explain}"
     msg="${2:-}"
     omarchy-shell dorneles.omaclippy react "$anim" "$msg"
+    ;;
+  prompt)
+    omarchy-shell dorneles.omaclippy prompt
     ;;
   speak)
     omarchy-shell dorneles.omaclippy speak "${1:-Hello!}"

@@ -32,7 +32,7 @@ PanelWindow {
 
   WlrLayershell.namespace: "omaclippy"
   WlrLayershell.layer: WlrLayer.Top
-  WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
+  WlrLayershell.keyboardFocus: root.promptActive ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
 
   // Input mask covers the companion area (enclosing Clippy and Speech Bubble)
   mask: Region {
@@ -52,6 +52,7 @@ PanelWindow {
   property bool reactToCursor: true
   property bool reactToWindows: true
   property bool reactToAgents: true
+  property bool reactToSystem: true
 
   // State Persistence
   readonly property string stateDir: Quickshell.env("HOME") + "/.local/state/omarchy/omaclippy"
@@ -78,7 +79,7 @@ PanelWindow {
   readonly property bool showSpeechLeft: root.posX < 180
 
   // -------------------------------------------------------------
-  // Position & Movement State
+  // Position & Movement State (with Spring Physics & Magnetism)
   // -------------------------------------------------------------
   property real posX: 350
   property real posY: 350
@@ -90,6 +91,7 @@ PanelWindow {
   property real pointerX: 0
   property real pointerY: 0
   property double lastCursorLookTime: 0
+  property var lastWindowRect: null
 
   // Dynamic Bounding Geometry for Companion Area
   readonly property real bubbleW: bubbleItem.width
@@ -124,12 +126,14 @@ PanelWindow {
   property int maxAnimLoops: 2
 
   // -------------------------------------------------------------
-  // Centralized Speech Bubble State
+  // Centralized Speech Bubble State & Interactive AI
   // -------------------------------------------------------------
   property string speechFullText: ""
   property string speechDisplayedText: ""
   property bool speechVisible: false
   property int speechTypewriterIdx: 0
+  property bool promptActive: false
+  property var currentActionButtons: []
 
   function playSound(soundId) {
     if (!root.soundEnabled || root.soundVolume <= 0 || !soundId) return
@@ -163,7 +167,6 @@ PanelWindow {
     var nextIdx = root.currentFrameIdx + 1
 
     if (cur.branching && cur.branching.branches && cur.branching.branches.length > 0) {
-      // If loop limit hasn't been exceeded, allow branching
       if (root.animLoopCount < root.maxAnimLoops) {
         var roll = Math.random() * 100
         var accum = 0
@@ -179,7 +182,6 @@ PanelWindow {
           }
         }
       } else {
-        // Loop limit reached: force forward progression or exitBranch
         if (cur.exitBranch !== null && cur.exitBranch !== undefined) {
           nextIdx = cur.exitBranch
         } else {
@@ -210,7 +212,6 @@ PanelWindow {
     onTriggered: root.advanceFrame()
   }
 
-  // Safety timer to prevent any unexpected hang
   Timer {
     id: safetyTimer
     interval: 10000
@@ -242,7 +243,7 @@ PanelWindow {
 
     root.animLoopCount = 0
     root.isCustomPlaying = (animName !== "RestPose")
-    root.currentAnim = animName
+    root.currentAnim = anim.name || animName
     root.currentAnimObj = anim
     root.currentFrameIdx = 0
     root.applyFrame(0)
@@ -268,10 +269,13 @@ PanelWindow {
   }
 
   // -------------------------------------------------------------
-  // Speech Functions
+  // Speech & Interactive AI Prompt Functions
   // -------------------------------------------------------------
-  function speak(text, durationMs) {
+  function speak(text, durationMs, buttons) {
     if (!root.clippyEnabled || !root.speechBubbles) return
+    root.promptActive = false
+    bubbleItem.isPromptMode = false
+    root.currentActionButtons = buttons || []
     root.speechFullText = text
     root.speechDisplayedText = ""
     root.speechVisible = true
@@ -287,8 +291,32 @@ PanelWindow {
     }
   }
 
+  function openPrompt() {
+    if (!root.clippyEnabled) return
+    root.currentActionButtons = []
+    root.speechFullText = ""
+    root.speechDisplayedText = ""
+    root.speechVisible = true
+    root.promptActive = true
+    bubbleItem.isPromptMode = true
+    autoCloseSpeechTimer.stop()
+    typewriterTimer.stop()
+    root.playAnimation("Hearing_1")
+  }
+
+  function sendToNativeAgent(promptText) {
+    root.promptActive = false
+    bubbleItem.isPromptMode = false
+    root.playAnimation("Thinking")
+    root.speak("Enviando para o agente: " + promptText, 4000)
+    Quickshell.execDetached(["omarchy", "agent", "prompt", promptText])
+  }
+
   function hideSpeech() {
     root.speechVisible = false
+    root.promptActive = false
+    bubbleItem.isPromptMode = false
+    root.currentActionButtons = []
     typewriterTimer.stop()
     autoCloseSpeechTimer.stop()
   }
@@ -346,6 +374,7 @@ PanelWindow {
             if (cfg.reactToCursor !== undefined) root.reactToCursor = Boolean(cfg.reactToCursor)
             if (cfg.reactToWindows !== undefined) root.reactToWindows = Boolean(cfg.reactToWindows)
             if (cfg.reactToAgents !== undefined) root.reactToAgents = Boolean(cfg.reactToAgents)
+            if (cfg.reactToSystem !== undefined) root.reactToSystem = Boolean(cfg.reactToSystem)
             if (cfg.posX !== undefined && !root.isDragging) root.posX = Number(cfg.posX)
             if (cfg.posY !== undefined && !root.isDragging) root.posY = Number(cfg.posY)
           }
@@ -367,6 +396,7 @@ PanelWindow {
         reactToCursor: root.reactToCursor,
         reactToWindows: root.reactToWindows,
         reactToAgents: root.reactToAgents,
+        reactToSystem: root.reactToSystem,
         posX: Math.round(root.posX),
         posY: Math.round(root.posY)
       }
@@ -385,7 +415,7 @@ PanelWindow {
         default: return 12000 + Math.random() * 10000;
       }
     }
-    running: root.clippyEnabled && !root.isDragging
+    running: root.clippyEnabled && !root.isDragging && !root.promptActive
     repeat: true
     onTriggered: {
       if (root.clippyMode === "roam" && Math.random() < 0.45) {
@@ -397,8 +427,59 @@ PanelWindow {
   }
 
   // -------------------------------------------------------------
-  // Roaming & Movement Physics
+  // Window Magnetism, Edge Snapping & Spring Physics
   // -------------------------------------------------------------
+  function snapToMagneticTargets() {
+    var finalX = root.posX
+    var finalY = root.posY
+
+    // Screen Edge Snapping (within 28px)
+    if (finalX < 28) finalX = 12
+    else if (finalX > root.width - root.clippyWidth - 28) finalX = root.width - root.clippyWidth - 12
+
+    if (finalY < 28) finalY = 12
+    else if (finalY > root.height - root.clippyHeight - 28) finalY = root.height - root.clippyHeight - 12
+
+    // Window Top/Titlebar Snapping (if window nearby)
+    if (root.lastWindowRect && (root.clippyMode === "perch" || root.clippyMode === "companion")) {
+      var w = root.lastWindowRect
+      var winSnapX = w.x + w.width - root.clippyWidth - 20
+      var winSnapY = Math.max(10, w.y - root.clippyHeight + 10)
+
+      if (Math.hypot(finalX - winSnapX, finalY - winSnapY) < 70) {
+        finalX = winSnapX
+        finalY = winSnapY
+      }
+    }
+
+    if (finalX !== root.posX || finalY !== root.posY) {
+      springMoveX.to = finalX
+      springMoveY.to = finalY
+      springMoveAnim.restart()
+    } else {
+      root.saveConfig()
+    }
+  }
+
+  ParallelAnimation {
+    id: springMoveAnim
+    NumberAnimation {
+      id: springMoveX
+      target: root
+      property: "posX"
+      duration: 380
+      easing.type: Easing.OutBack
+    }
+    NumberAnimation {
+      id: springMoveY
+      target: root
+      property: "posY"
+      duration: 380
+      easing.type: Easing.OutBack
+    }
+    onFinished: root.saveConfig()
+  }
+
   function pickRoamTarget() {
     var margin = 60
     var maxX = root.width - root.clippyWidth - margin
@@ -443,7 +524,7 @@ PanelWindow {
     root.pointerX = x
     root.pointerY = y
 
-    if (!root.reactToCursor || !root.clippyEnabled || root.isDragging || root.isCustomPlaying) return
+    if (!root.reactToCursor || !root.clippyEnabled || root.isDragging || root.isCustomPlaying || root.promptActive) return
 
     var now = Date.now()
     if (now - root.lastCursorLookTime < 4500) return
@@ -472,6 +553,7 @@ PanelWindow {
   }
 
   function onWindowMoved(rect) {
+    root.lastWindowRect = rect
     if (!root.reactToWindows || !root.clippyEnabled || root.isDragging) return
     if (root.clippyMode === "perch") {
       var targetX = rect.x + Math.max(10, rect.width - root.clippyWidth - 30)
@@ -485,7 +567,7 @@ PanelWindow {
   }
 
   function onScreenClick(btn, clickX, clickY) {
-    if (!root.reactToCursor || !root.clippyEnabled || root.isDragging || root.isCustomPlaying) return
+    if (!root.reactToCursor || !root.clippyEnabled || root.isDragging || root.isCustomPlaying || root.promptActive) return
     var dx = clickX - (root.posX + root.clippyWidth / 2)
     var dy = clickY - (root.posY + root.clippyHeight / 2)
     if (Math.hypot(dx, dy) < 180 && Math.random() < 0.25) {
@@ -525,6 +607,19 @@ PanelWindow {
               root.speak(data.message || "Agent finished successfully!")
             } else if (data.agent_event === "working") {
               root.playAnimation("GetTechy")
+            }
+          }
+          if (data.system_event && root.reactToSystem && root.clippyEnabled) {
+            if (data.system_event === "low_battery") {
+              root.playAnimation("Alert")
+              root.speak(data.message || "Bateria baixa!", 6000)
+            } else if (data.system_event === "charger_connected") {
+              root.playAnimation("Congratulate")
+              root.speak(data.message || "Carregador conectado!", 4000)
+            } else if (data.system_event === "idle_sleep") {
+              root.playAnimation("IdleSnooze")
+            } else if (data.system_event === "user_wake") {
+              root.playAnimation("Greeting")
             }
           }
         } catch (e) {}
@@ -598,6 +693,11 @@ PanelWindow {
       return "speaking"
     }
 
+    function prompt(): string {
+      root.openPrompt()
+      return "prompt opened"
+    }
+
     function tip(): string {
       root.showRandomTip()
       return "tip shown"
@@ -656,7 +756,8 @@ PanelWindow {
         frameCoords: [root.currentFrameX, root.currentFrameY],
         isCustomPlaying: root.isCustomPlaying,
         pos: [Math.round(root.posX), Math.round(root.posY)],
-        speechVisible: root.speechVisible
+        speechVisible: root.speechVisible,
+        promptActive: root.promptActive
       })
     }
   }
@@ -681,6 +782,8 @@ PanelWindow {
       active: root.speechVisible
       placeBelow: root.showSpeechBelow
       placeLeft: root.showSpeechLeft
+      isPromptMode: root.promptActive
+      actionButtons: root.currentActionButtons
 
       x: root.showSpeechLeft
          ? 0
@@ -690,6 +793,9 @@ PanelWindow {
          : 0
 
       onDismissed: root.hideSpeech()
+      onPromptSubmitted: function(promptText) {
+        root.sendToNativeAgent(promptText)
+      }
     }
 
     // Clippy Body Container & Interaction
@@ -722,7 +828,7 @@ PanelWindow {
         }
       }
 
-      // Drag & Click Interaction Area
+      // Drag, Click, & Double-Click Interaction Area
       MouseArea {
         id: dragArea
         anchors.fill: parent
@@ -759,11 +865,17 @@ PanelWindow {
           root.posY = Math.max(0, Math.min(root.height - root.clippyHeight, p.y - grabDy))
         }
 
+        onDoubleClicked: function(mouse) {
+          if (mouse.button === Qt.LeftButton) {
+            root.openPrompt()
+          }
+        }
+
         onReleased: function(mouse) {
           if (dragging) {
             dragging = false
             root.isDragging = false
-            root.saveConfig()
+            root.snapToMagneticTargets()
           } else {
             if (mouse.button === Qt.RightButton) {
               root.showRandomTip()

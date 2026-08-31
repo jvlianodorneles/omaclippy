@@ -33,6 +33,7 @@ Panel {
   property bool reactToCursor: true
   property bool reactToWindows: true
   property bool reactToAgents: true
+  property bool reactToSystem: true
 
   property string currentTab: "actions" // "actions" | "settings"
   property bool tipFeedback: false
@@ -60,6 +61,7 @@ Panel {
             if (cfg.reactToCursor !== undefined) root.reactToCursor = Boolean(cfg.reactToCursor)
             if (cfg.reactToWindows !== undefined) root.reactToWindows = Boolean(cfg.reactToWindows)
             if (cfg.reactToAgents !== undefined) root.reactToAgents = Boolean(cfg.reactToAgents)
+            if (cfg.reactToSystem !== undefined) root.reactToSystem = Boolean(cfg.reactToSystem)
           }
         }
       } catch (e) {}
@@ -78,7 +80,8 @@ Panel {
         speechBubbles: root.speechBubbles,
         reactToCursor: root.reactToCursor,
         reactToWindows: root.reactToWindows,
-        reactToAgents: root.reactToAgents
+        reactToAgents: root.reactToAgents,
+        reactToSystem: root.reactToSystem
       }
       configFile.setText(JSON.stringify(cfg, null, 2) + "\n")
     } catch (e) {}
@@ -628,6 +631,17 @@ Panel {
                   checked: root.reactToAgents
                   onClicked: {
                     root.reactToAgents = !root.reactToAgents
+                    root.saveConfig()
+                  }
+                }
+
+                Toggle {
+                  width: behaviorCol.width
+                  label: "Hardware & Sleep Reactivity"
+                  description: "Battery alerts, charger celebrations, and sleep/wake cycles"
+                  checked: root.reactToSystem
+                  onClicked: {
+                    root.reactToSystem = !root.reactToSystem
                     root.saveConfig()
                   }
                 }

@@ -1,12 +1,16 @@
 #!/usr/bin/env python3
 """Omaclippy Tracker Daemon for Omarchy / Hyprland.
 
-Streams real-time pointer coordinates, window moves, clicks, and AI agent events
-from Hyprland IPC, pointer input devices, and Herdr CLI to stdout as JSON lines:
+Streams real-time pointer coordinates, window moves, clicks, AI agent events,
+battery status, and user inactivity/sleep states to stdout as JSON lines:
   {"cursor": {"x": 1234, "y": 567}}
   {"window_moved": true, "rect": {"x": 12, "y": 38, "width": 1342, "height": 718}}
   {"click": true, "btn": "left", "x": 1234, "y": 567}
   {"agent_event": "blocked", "agent": "worker-1", "message": "..."}
+  {"system_event": "low_battery", "percentage": 12, "message": "..."}
+  {"system_event": "charger_connected", "message": "..."}
+  {"system_event": "idle_sleep"}
+  {"system_event": "user_wake"}
 """
 
 import errno
@@ -55,6 +59,8 @@ BUTTON_NAMES = {
 
 running = True
 stdout_lock = threading.Lock()
+last_activity_time = time.monotonic()
+is_user_asleep = False
 
 
 def _signal_handler(_sig, _frame):
@@ -77,12 +83,24 @@ def emit(data):
             sys.exit(0)
 
 
-def herdr_agent_watcher():
-    """Background thread watching Herdr agent states."""
-    known_states = {}
+def record_activity():
+    global last_activity_time, is_user_asleep
+    last_activity_time = time.monotonic()
+    if is_user_asleep:
+        is_user_asleep = False
+        emit({"system_event": "user_wake", "message": "Estou de volta!"})
+
+
+def system_hardware_watcher():
+    """Background thread monitoring Herdr agents, battery, and sleep/wake cycles."""
+    global is_user_asleep
+    known_herdr_states = {}
+    last_ac_state = None
+    low_battery_warned = False
     time.sleep(2.0)
 
     while running:
+        # 1. Herdr Agent Watcher
         try:
             res = subprocess.run(
                 ["herdr", "agent", "list"],
@@ -98,7 +116,7 @@ def herdr_agent_watcher():
                         for a in agents:
                             name = a.get("name") or a.get("pane_id") or "Agent"
                             status = a.get("agent_status", "unknown")
-                            prev_status = known_states.get(name)
+                            prev_status = known_herdr_states.get(name)
 
                             if prev_status is not None and prev_status != status:
                                 if status == "blocked":
@@ -120,11 +138,63 @@ def herdr_agent_watcher():
                                         "message": f"Agente '{name}' começou a trabalhar..."
                                     })
 
-                            known_states[name] = status
+                            known_herdr_states[name] = status
                 except Exception:
                     pass
         except Exception:
             pass
+
+        # 2. Battery & AC Power Monitor
+        try:
+            # Check AC Online
+            ac_online = None
+            for ac_path in glob.glob("/sys/class/power_supply/AC*/online"):
+                try:
+                    with open(ac_path, "r") as f:
+                        ac_online = int(f.read().strip())
+                        break
+                except Exception:
+                    pass
+
+            if ac_online is not None:
+                if last_ac_state is not None and last_ac_state == 0 and ac_online == 1:
+                    low_battery_warned = False
+                    emit({"system_event": "charger_connected", "message": "⚡ Carregador conectado!"})
+                last_ac_state = ac_online
+
+            # Check Battery Level & Discharge
+            for bat_path in glob.glob("/sys/class/power_supply/BAT*/capacity"):
+                try:
+                    with open(bat_path, "r") as f:
+                        cap = int(f.read().strip())
+                    status_path = bat_path.replace("capacity", "status")
+                    stat = "Discharging"
+                    if os.path.exists(status_path):
+                        with open(status_path, "r") as f:
+                            stat = f.read().strip()
+
+                    if cap <= 15 and stat == "Discharging":
+                        if not low_battery_warned:
+                            low_battery_warned = True
+                            emit({
+                                "system_event": "low_battery",
+                                "percentage": cap,
+                                "message": f"⚠️ Bateria fraca ({cap}%)! Conecte o carregador."
+                            })
+                    elif cap > 20:
+                        low_battery_warned = False
+                    break
+                except Exception:
+                    pass
+        except Exception:
+            pass
+
+        # 3. User Inactivity / Sleep Cycle (5 minutes = 300s)
+        idle_duration = time.monotonic() - last_activity_time
+        if idle_duration > 300 and not is_user_asleep:
+            is_user_asleep = True
+            emit({"system_event": "idle_sleep", "message": "Zzz..."})
+
         time.sleep(2.5)
 
 
@@ -148,14 +218,16 @@ def query_cursorpos(sock_path):
         return None
     try:
         s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-        s.settimeout(0.04)
-        s.connect(sock_path)
-        s.sendall(b"cursorpos")
-        data = s.recv(128).decode("utf-8", errors="ignore").strip()
-        s.close()
-        if "," in data:
-            parts = data.split(",")
-            return int(parts[0].strip()), int(parts[1].strip())
+        try:
+            s.settimeout(0.04)
+            s.connect(sock_path)
+            s.sendall(b"cursorpos")
+            data = s.recv(128).decode("utf-8", errors="ignore").strip()
+            if "," in data:
+                parts = data.split(",")
+                return int(parts[0].strip()), int(parts[1].strip())
+        finally:
+            s.close()
     except Exception:
         pass
     return None
@@ -166,26 +238,28 @@ def query_activewindow(sock_path):
         return None
     try:
         s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-        s.settimeout(0.06)
-        s.connect(sock_path)
-        s.sendall(b"j/activewindow")
-        data = b""
-        while True:
-            chunk = s.recv(4096)
-            if not chunk:
-                break
-            data += chunk
-        s.close()
-        win = json.loads(data.decode("utf-8", errors="ignore"))
-        at = win.get("at")
-        size = win.get("size")
-        if at and size and len(at) >= 2 and len(size) >= 2:
-            return {
-                "x": at[0],
-                "y": at[1],
-                "width": size[0],
-                "height": size[1],
-            }
+        try:
+            s.settimeout(0.06)
+            s.connect(sock_path)
+            s.sendall(b"j/activewindow")
+            data = b""
+            while True:
+                chunk = s.recv(4096)
+                if not chunk:
+                    break
+                data += chunk
+            win = json.loads(data.decode("utf-8", errors="ignore"))
+            at = win.get("at")
+            size = win.get("size")
+            if at and size and len(at) >= 2 and len(size) >= 2:
+                return {
+                    "x": at[0],
+                    "y": at[1],
+                    "width": size[0],
+                    "height": size[1],
+                }
+        finally:
+            s.close()
     except Exception:
         pass
     return None
@@ -219,8 +293,8 @@ def open_pointer_devices():
 
 
 def main():
-    # Start background Herdr agent watcher
-    watcher_thread = threading.Thread(target=herdr_agent_watcher, daemon=True)
+    # Start background watcher
+    watcher_thread = threading.Thread(target=system_hardware_watcher, daemon=True)
     watcher_thread.start()
 
     cmd_sock, event_sock = get_hyprland_socket_paths()
@@ -277,6 +351,7 @@ def main():
                                     window_event = True
                                     break
                             if window_event:
+                                record_activity()
                                 win = query_activewindow(cmd_sock)
                                 if win and win != last_win:
                                     last_win = win
@@ -298,6 +373,7 @@ def main():
                                 _, _, ev_type, ev_code, ev_value = struct.unpack(FMT, chunk)
 
                                 if ev_type == EV_KEY:
+                                    record_activity()
                                     if ev_code in BUTTON_NAMES:
                                         btn_name = BUTTON_NAMES[ev_code]
                                         if ev_value == 1:
@@ -333,7 +409,6 @@ def main():
                             if e.errno in (errno.ENODEV, errno.EBADF):
                                 try:
                                     os.close(fd)
-                                    pass
                                 except Exception:
                                     pass
                                 devices.pop(fd, None)
@@ -346,7 +421,8 @@ def main():
             x, y = pos
             if x != last_x or y != last_y:
                 last_x, last_y = x, y
-                emit({"cursor": {"x": x, "y": last_y}})
+                record_activity()
+                emit({"cursor": {"x": x, "y": y}})
                 idle_count = 0
                 time.sleep(0.012)
             else:
@@ -365,6 +441,7 @@ def main():
             win = query_activewindow(cmd_sock)
             if win and win != last_win:
                 last_win = win
+                record_activity()
                 emit({"window_moved": True, "rect": win})
 
 

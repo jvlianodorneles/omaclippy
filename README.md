@@ -140,11 +140,42 @@ Omaclippy monitors [Herdr](https://github.com/fabean/herdr) agent states in real
 
 ---
 
-### 💻 3. CLI Helper (`omaclippy`)
+### 💬 3. Interactive Floating AI Prompt & Native System Agent
+
+Ask questions directly to your default coding agent (`agy` / `claude` / `herdr`) without switching windows:
+- **Double Click Clippy** (or run `omaclippy prompt`) to open the retro floating prompt directly on screen.
+- Type your prompt and press **Enter**:
+  - Clippy morphs into `Thinking` mode.
+  - Forwards the request seamlessly to Omarchy's native agent system (`omarchy agent prompt "<PROMPT>"`).
+
+---
+
+### ⚡ 4. Hardware & Inactivity Reactivity
+
+Omaclippy monitors your system hardware and desktop activity in the background:
+- **🔋 Low Battery Alert:** Warns with `Alert` when battery drops below 15% on discharge.
+- **⚡ Charger Plugged In:** Celebrates with `Congratulate` when connected to power.
+- **💤 Inactivity Sleep:** After 5 minutes without mouse/keyboard activity, Clippy falls asleep (`IdleSnooze` with *Zzz*).
+- **👋 User Return:** Upon moving the mouse or typing, Clippy wakes up cheerfully (`Greeting`).
+
+---
+
+### 🧲 5. Window Magnetism & Spring Physics
+
+- **Window Title Snapping:** When dragging Clippy near an active window titlebar in `companion` or `perch` mode, he magnetically snaps onto the window corner.
+- **Edge Snapping:** Snaps cleanly to monitor borders within 28px.
+- **Elastic Bounce Animation:** Physics-based spring animations (`Easing.OutBack`) for natural, playful movement.
+
+---
+
+### 💻 6. CLI Helper (`omaclippy`)
 
 You can control Clippy directly from terminal commands or scripts:
 
 ```bash
+# Interactive AI Prompt
+omaclippy prompt
+
 # Quick agent status triggers
 omaclippy thinking "Analisando dependências do projeto..."
 omaclippy writing "Refatorando arquivos QML..."
@@ -161,7 +192,7 @@ omaclippy tip
 
 ---
 
-### 🪝 4. Git & Terminal Shell Hooks
+### 🪝 7. Git & Terminal Shell Hooks
 
 Ready-to-use hooks are provided in the `hooks/` directory:
 
