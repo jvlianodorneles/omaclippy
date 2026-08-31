@@ -575,7 +575,7 @@ PanelWindow {
     width: root.clippyWidth
     height: root.clippyHeight
 
-    // Speech Bubble with smart adaptive positioning (above vs below, left vs right)
+    // Speech Bubble positioned with explicit coordinates (prevents QML anchor conflict/collapse)
     SpeechBubble {
       id: bubbleItem
       clippyScale: root.scaleFactor
@@ -585,17 +585,12 @@ PanelWindow {
       placeBelow: root.showSpeechBelow
       placeLeft: root.showSpeechLeft
 
-      anchors.top: root.showSpeechBelow ? clippyContainer.bottom : undefined
-      anchors.topMargin: root.showSpeechBelow ? 8 : 0
-
-      anchors.bottom: root.showSpeechBelow ? undefined : clippyContainer.top
-      anchors.bottomMargin: root.showSpeechBelow ? 0 : 8
-
-      anchors.right: root.showSpeechLeft ? undefined : clippyContainer.right
-      anchors.rightMargin: root.showSpeechLeft ? 0 : 10
-
-      anchors.left: root.showSpeechLeft ? clippyContainer.left : undefined
-      anchors.leftMargin: root.showSpeechLeft ? 10 : 0
+      x: root.showSpeechLeft
+         ? 0
+         : (root.clippyWidth - width)
+      y: root.showSpeechBelow
+         ? (root.clippyHeight + 8)
+         : (-height - 8)
 
       onDismissed: root.hideSpeech()
     }

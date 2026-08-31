@@ -32,13 +32,8 @@ Item {
   }
 
   // Pre-calculated target dimensions
-  readonly property real bubbleContentWidth: measureText.paintedWidth > 180
-    ? 220
-    : Math.max(100, Math.min(220, measureText.paintedWidth))
-  readonly property real bubbleContentHeight: Math.max(24, measureText.paintedHeight)
-
-  readonly property real calculatedWidth: bubbleContentWidth + 48
-  readonly property real calculatedHeight: bubbleContentHeight + 24
+  readonly property real calculatedWidth: Math.min(270, Math.max(140, measureText.paintedWidth + 48))
+  readonly property real calculatedHeight: Math.max(44, measureText.paintedHeight + 24)
 
   implicitWidth: calculatedWidth
   implicitHeight: calculatedHeight
@@ -133,15 +128,8 @@ Item {
       border.color: "#ca8a04"
       border.width: 1.5
 
-      anchors.bottom: root.placeBelow ? undefined : parent.bottom
-      anchors.top: root.placeBelow ? parent.top : undefined
-      anchors.bottomMargin: root.placeBelow ? 0 : -6
-      anchors.topMargin: root.placeBelow ? -6 : 0
-
-      anchors.right: root.placeLeft ? undefined : parent.right
-      anchors.left: root.placeLeft ? parent.left : undefined
-      anchors.rightMargin: root.placeLeft ? 0 : 24
-      anchors.leftMargin: root.placeLeft ? 24 : 0
+      x: root.placeLeft ? 20 : (parent.width - 32)
+      y: root.placeBelow ? -6 : (parent.height - 6)
     }
 
     // Interior cover so the tail's internal border is hidden
@@ -150,14 +138,8 @@ Item {
       color: "#fef9c3"
       width: 16
       height: 6
-      anchors.bottom: root.placeBelow ? undefined : parent.bottom
-      anchors.top: root.placeBelow ? parent.top : undefined
-      anchors.bottomMargin: root.placeBelow ? 0 : 1
-      anchors.topMargin: root.placeBelow ? 1 : 0
-      anchors.right: root.placeLeft ? undefined : parent.right
-      anchors.left: root.placeLeft ? parent.left : undefined
-      anchors.rightMargin: root.placeLeft ? 0 : 22
-      anchors.leftMargin: root.placeLeft ? 22 : 0
+      x: root.placeLeft ? 18 : (parent.width - 34)
+      y: root.placeBelow ? 0 : (parent.height - 6)
     }
 
     RowLayout {
