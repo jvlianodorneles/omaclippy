@@ -534,18 +534,18 @@ PanelWindow {
     // Ignore if cursor is beyond 950px
     if (dist > 950) return
 
-    // Determine target look direction from angle
+    // Determine target look direction from angle (adjusted for sprite screen perspective)
     var targetAnim = "RestPose"
     if (dist >= 30) {
       if (Math.abs(dx) > Math.abs(dy) * 1.8) {
-        targetAnim = dx < 0 ? "LookLeft" : "LookRight"
+        targetAnim = dx < 0 ? "LookRight" : "LookLeft"
       } else if (Math.abs(dy) > Math.abs(dx) * 1.8) {
         targetAnim = dy < 0 ? "LookUp" : "LookDown"
       } else {
-        if (dx < 0 && dy < 0) targetAnim = "LookUpLeft"
-        else if (dx > 0 && dy < 0) targetAnim = "LookUpRight"
-        else if (dx < 0 && dy > 0) targetAnim = "LookDownLeft"
-        else targetAnim = "LookDownRight"
+        if (dx < 0 && dy < 0) targetAnim = "LookUpRight"
+        else if (dx > 0 && dy < 0) targetAnim = "LookUpLeft"
+        else if (dx < 0 && dy > 0) targetAnim = "LookDownRight"
+        else targetAnim = "LookDownLeft"
       }
     }
 
