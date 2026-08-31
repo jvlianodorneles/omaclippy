@@ -222,10 +222,35 @@ omarchy-shell dorneles.omaclippy status
 
 ## 🎭 Animation Catalogue (43 Total)
 
-- **Greetings & Gestures:** `Wave`, `Greeting`, `GoodBye`, `Explain`, `Thinking`, `Alert`, `Congratulate`, `GetAttention`, `GestureUp`, `GestureDown`, `GestureLeft`, `GestureRight`
-- **Costumes & Actions:** `GetWizardy` (Merlin), `GetArtsy` (Painter), `GetTechy` (Computer), `Writing` (Notepad), `Print` (Printer), `Save` (Floppy), `SendMail` (Paper Airplane), `Searching`, `Processing`, `EmptyTrash`
-- **Idles:** `RestPose`, `Idle1_1`, `IdleAtom`, `IdleEyeBrowRaise`, `IdleFingerTap`, `IdleHeadScratch`, `IdleRopePile`, `IdleSideToSide`, `IdleSnooze`
-- **Directional Looks:** `LookLeft`, `LookRight`, `LookUp`, `LookDown`, `LookUpLeft`, `LookUpRight`, `LookDownLeft`, `LookDownRight`
+- **Transformations & Tools:**
+  - `Save`: Turns into a paper holder with a lined notebook page sliding in/out 🔊
+  - `Print`: Rolls out a lined sheet of paper like a printing feed 🔊
+  - `SendMail`: Folds into a paper airplane and flies across the screen 🔊
+  - `Writing`: Holds a yellow paper pad and writes with a pen 🔊
+  - `Searching`: Pulls out a vintage spyglass/telescope and peers through it 🔊
+  - `EmptyTrash`: Spins into a wire tornado/vortex that shreds and swallows a paper 🔊
+  - `Processing`: Morphs into a scoop/paddle that juggles a paper cup 🔊
+  - `Congratulate` / `GetWizardy`: Unfolds into a glowing green Checkmark with magical sparkles 🔊
+- **Greetings, Expressions & Gestures:**
+  - `Wave`: Happily smiles and waves a hand 🔊
+  - `Greeting`: Spins in from a spiral and unfolds into Clippy 🔊
+  - `GoodBye`: Waves farewell and spins out of the screen 🔊
+  - `Alert`: Knocks both hands urgently against the glass screen 🔊
+  - `GetAttention`: Taps head/eyes down on a paper mat to catch attention 🔊
+  - `Explain`: Opens both arms wide to explain a concept
+  - `Hearing_1`: Cups a hand behind the ear listening intently 🔊
+  - `CheckingSomething`: Leans forward and curiously inspects the ground/desktop 🔊
+  - `GestureUp`, `GestureDown`, `GestureLeft`, `GestureRight`: Pointing gestures
+- **Idles & Directional Looks:**
+  - `IdleAtom` / `GetTechy` / `Thinking`: Morphs into an atom with 3 spinning orbital rings 🔊
+  - `IdleRopePile` / `GetArtsy`: Unravels like a hanging mobile of loose strings and pulls back up
+  - `IdleSnooze`: Rests head, falls fast asleep, and snores with floating *Zzz*
+  - `IdleFingerTap`: Impatiently taps fingers on the ground
+  - `IdleHeadScratch`: Scratches the top of the head in thought
+  - `IdleEyeBrowRaise`: Inquisitively raises the left eyebrow
+  - `IdleSideToSide`: Gently rocks body and eyes side to side
+  - `Idle1_1` & `RestPose`: Natural breathing, eye blinking, and neutral resting posture
+  - `LookUp`, `LookDown`, `LookLeft`, `LookRight`, `LookUpLeft`, `LookUpRight`, `LookDownLeft`, `LookDownRight`: Precise directional glances
 
 ---
 

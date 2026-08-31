@@ -10991,8 +10991,10 @@ function getAnimation(name) {
 
   var aliases = {
     "wizard": "GetWizardy",
+    "wizardry": "GetWizardy",
     "getwizard": "GetWizardy",
     "getwizardy": "GetWizardy",
+    "getwizardry": "GetWizardy",
     "merlin": "GetWizardy",
     "magic": "GetWizardy",
     "tech": "GetTechy",
