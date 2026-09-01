@@ -143,12 +143,13 @@ Panel {
           anchors.fill: parent
           spacing: Style.space(6)
 
-          Image {
-            source: Qt.resolvedUrl("assets/icon.svg")
-            Layout.preferredWidth: Style.space(20)
-            Layout.preferredHeight: Style.space(20)
-            fillMode: Image.PreserveAspectFit
-            smooth: true
+          Text {
+            text: "\uf0c6"
+            color: Color.accent
+            font.family: root.fontFamily
+            font.pixelSize: Style.font.icon
+            font.bold: true
+            Layout.alignment: Qt.AlignVCenter
           }
 
           Text {

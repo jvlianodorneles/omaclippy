@@ -114,9 +114,10 @@ def system_hardware_watcher():
                     agents = payload.get("result", {}).get("agents", [])
                     if isinstance(agents, list):
                         for a in agents:
-                            name = a.get("name") or a.get("pane_id") or "Agent"
+                            key = a.get("pane_id") or a.get("name") or "Agent"
+                            name = a.get("name") or a.get("agent") or a.get("pane_id") or "Agent"
                             status = a.get("agent_status", "unknown")
-                            prev_status = known_herdr_states.get(name)
+                            prev_status = known_herdr_states.get(key)
 
                             if prev_status is not None and prev_status != status:
                                 if status == "blocked":
@@ -131,14 +132,14 @@ def system_hardware_watcher():
                                         "agent": name,
                                         "message": f"🎉 Agente '{name}' concluiu sua tarefa com sucesso!"
                                     })
-                                elif status == "working" and prev_status in ("idle", "unknown", "done"):
+                                elif status == "working" and prev_status in ("idle", "unknown", "done", "blocked"):
                                     emit({
                                         "agent_event": "working",
                                         "agent": name,
                                         "message": f"Agente '{name}' começou a trabalhar..."
                                     })
 
-                            known_herdr_states[name] = status
+                            known_herdr_states[key] = status
                 except Exception:
                     pass
         except Exception:
