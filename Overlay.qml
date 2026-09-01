@@ -96,20 +96,21 @@ PanelWindow {
   // Dynamic Bounding Geometry for Companion Area
   readonly property real bubbleW: bubbleItem.width
   readonly property real bubbleH: bubbleItem.height
+  readonly property bool speechActive: root.speechVisible || (bubbleItem && bubbleItem.visible)
 
-  readonly property real areaX: root.speechVisible
+  readonly property real areaX: root.speechActive
     ? (root.showSpeechLeft ? root.posX : (root.posX - Math.max(0, root.bubbleW - root.clippyWidth)))
     : root.posX
 
-  readonly property real areaY: root.speechVisible
+  readonly property real areaY: root.speechActive
     ? (root.showSpeechBelow ? root.posY : (root.posY - root.bubbleH - 8))
     : root.posY
 
-  readonly property real areaWidth: root.speechVisible
+  readonly property real areaWidth: root.speechActive
     ? Math.max(root.clippyWidth, root.bubbleW)
     : root.clippyWidth
 
-  readonly property real areaHeight: root.speechVisible
+  readonly property real areaHeight: root.speechActive
     ? (root.clippyHeight + root.bubbleH + 8)
     : root.clippyHeight
 
@@ -709,6 +710,16 @@ PanelWindow {
       return "tip shown"
     }
 
+    function hide(): string {
+      root.hideSpeech()
+      return "hidden"
+    }
+
+    function hideSpeech(): string {
+      root.hideSpeech()
+      return "hidden"
+    }
+
     function setMode(val: string): string {
       if (["companion", "roam", "perch"].indexOf(val) !== -1) {
         root.clippyMode = val
@@ -810,7 +821,7 @@ PanelWindow {
       x: root.showSpeechLeft
          ? 0
          : (parent.width - root.clippyWidth)
-      y: (root.speechVisible && !root.showSpeechBelow)
+      y: (root.speechActive && !root.showSpeechBelow)
          ? (root.bubbleH + 8)
          : 0
       width: root.clippyWidth

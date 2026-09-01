@@ -1,5 +1,7 @@
 import QtQuick
 import QtQuick.Layouts
+import QtQuick.Shapes
+import QtQuick.Effects
 import qs.Commons
 
 Item {
@@ -43,13 +45,17 @@ Item {
       ? 280
       : Math.max(150, Math.min(280, Math.round(textMetrics.width + 52))))
 
-  readonly property real calculatedHeight: root.isPromptMode
+  readonly property real tailHeight: 9
+
+  readonly property real contentBodyHeight: root.isPromptMode
     ? 60
     : (root.actionButtons && root.actionButtons.length > 0
       ? (Math.max(46, Math.round(measuredLines * 18 + 26)) + 30)
       : (textMetrics.width > 200
         ? Math.max(46, Math.round(measuredLines * 18 + 26))
         : 44))
+
+  readonly property real calculatedHeight: contentBodyHeight + tailHeight
 
   implicitWidth: calculatedWidth
   implicitHeight: calculatedHeight
@@ -59,6 +65,9 @@ Item {
   visible: opacity > 0.01
   opacity: active ? 1.0 : 0.0
   scale: active ? 1.0 : 0.85
+  transformOrigin: root.placeBelow
+    ? (root.placeLeft ? Item.TopLeft : Item.TopRight)
+    : (root.placeLeft ? Item.BottomLeft : Item.BottomRight)
 
   Behavior on opacity {
     NumberAnimation { duration: 180; easing.type: Easing.OutQuad }
@@ -111,63 +120,132 @@ Item {
   }
 
   // -------------------------------------------------------------
-  // Visual Bubble Rectangle (Nostalgic warm yellow)
+  // Visual Bubble Vector Shape (Continuous path with integrated pointer)
   // -------------------------------------------------------------
-  Rectangle {
-    id: bubbleRect
+  // Soft Drop Shadow Shape (exact contour match)
+  Shape {
+    id: shadowShape
     anchors.fill: parent
-    radius: 8
-    color: "#fef9c3" // Classic nostalgic warm yellow
-    border.color: "#ca8a04" // Golden amber border
-    border.width: 1.5
+    anchors.topMargin: root.placeBelow ? -2 : 2
+    anchors.bottomMargin: root.placeBelow ? 2 : -2
+    anchors.leftMargin: 1
+    anchors.rightMargin: -1
+    opacity: 0.16
+    z: -1
 
-    // Subtle drop shadow
-    Rectangle {
-      z: -2
-      anchors.fill: parent
-      anchors.margins: -1
-      anchors.topMargin: root.placeBelow ? -2 : 2
-      anchors.bottomMargin: root.placeBelow ? 2 : -2
-      radius: parent.radius
-      color: "#000000"
-      opacity: 0.18
+    readonly property real r: 8
+    readonly property real tw: 14
+    readonly property real th: root.tailHeight
+    readonly property real w: width
+    readonly property real h: height
+    readonly property real bodyTop: root.placeBelow ? th : 0
+    readonly property real bodyBot: root.placeBelow ? h : (h - th)
+
+    readonly property real tailX1: root.placeLeft ? 18 : (w - 18 - tw)
+    readonly property real tailTipX: root.placeLeft ? 22 : (w - 22)
+    readonly property real tailX2: root.placeLeft ? (18 + tw) : (w - 18)
+
+    ShapePath {
+      strokeWidth: 0
+      strokeColor: "transparent"
+      fillColor: "#000000"
+      joinStyle: ShapePath.RoundJoin
+      capStyle: ShapePath.RoundCap
+
+      startX: shadowShape.r
+      startY: shadowShape.bodyTop
+
+      PathLine { x: root.placeBelow ? shadowShape.tailX1 : (shadowShape.w - shadowShape.r); y: shadowShape.bodyTop }
+      PathLine { x: root.placeBelow ? shadowShape.tailTipX : (shadowShape.w - shadowShape.r); y: root.placeBelow ? 0 : shadowShape.bodyTop }
+      PathLine { x: root.placeBelow ? shadowShape.tailX2 : (shadowShape.w - shadowShape.r); y: shadowShape.bodyTop }
+      PathLine { x: shadowShape.w - shadowShape.r; y: shadowShape.bodyTop }
+
+      PathArc { x: shadowShape.w; y: shadowShape.bodyTop + shadowShape.r; radiusX: shadowShape.r; radiusY: shadowShape.r; direction: PathArc.Clockwise }
+      PathLine { x: shadowShape.w; y: shadowShape.bodyBot - shadowShape.r }
+      PathArc { x: shadowShape.w - shadowShape.r; y: shadowShape.bodyBot; radiusX: shadowShape.r; radiusY: shadowShape.r; direction: PathArc.Clockwise }
+
+      PathLine { x: !root.placeBelow ? shadowShape.tailX2 : shadowShape.r; y: shadowShape.bodyBot }
+      PathLine { x: !root.placeBelow ? shadowShape.tailTipX : shadowShape.r; y: !root.placeBelow ? shadowShape.h : shadowShape.bodyBot }
+      PathLine { x: !root.placeBelow ? shadowShape.tailX1 : shadowShape.r; y: shadowShape.bodyBot }
+      PathLine { x: shadowShape.r; y: shadowShape.bodyBot }
+
+      PathArc { x: 0; y: shadowShape.bodyBot - shadowShape.r; radiusX: shadowShape.r; radiusY: shadowShape.r; direction: PathArc.Clockwise }
+      PathLine { x: 0; y: shadowShape.bodyTop + shadowShape.r }
+      PathArc { x: shadowShape.r; y: shadowShape.bodyTop; radiusX: shadowShape.r; radiusY: shadowShape.r; direction: PathArc.Clockwise }
     }
+  }
 
-    // Speech Tail (Arrow) pointing towards Clippy
-    Rectangle {
-      id: tailRect
-      z: -1
-      width: 12
-      height: 12
-      rotation: 45
-      color: "#fef9c3"
-      border.color: "#ca8a04"
-      border.width: 1.5
+  // Main Speech Bubble Shape
+  Shape {
+    id: bubbleShape
+    anchors.fill: parent
+    z: 0
 
-      x: root.placeLeft ? 20 : (parent.width - 32)
-      y: root.placeBelow ? -6 : (parent.height - 6)
+    readonly property real r: 8
+    readonly property real tw: 14
+    readonly property real th: root.tailHeight
+    readonly property real w: width
+    readonly property real h: height
+    readonly property real bodyTop: root.placeBelow ? th : 0
+    readonly property real bodyBot: root.placeBelow ? h : (h - th)
+
+    readonly property real tailX1: root.placeLeft ? 18 : (w - 18 - tw)
+    readonly property real tailTipX: root.placeLeft ? 22 : (w - 22)
+    readonly property real tailX2: root.placeLeft ? (18 + tw) : (w - 18)
+
+    // Main Bubble Vector Outline & Fill
+    ShapePath {
+      strokeWidth: 1.5
+      strokeColor: "#ca8a04" // Golden amber border
+      fillColor: "#fef9c3"   // Nostalgic warm yellow
+      joinStyle: ShapePath.RoundJoin
+      capStyle: ShapePath.RoundCap
+
+      startX: bubbleShape.r
+      startY: bubbleShape.bodyTop
+
+      // Top edge (incorporates tail when pointing UP to Clippy)
+      PathLine { x: root.placeBelow ? bubbleShape.tailX1 : (bubbleShape.w - bubbleShape.r); y: bubbleShape.bodyTop }
+      PathLine { x: root.placeBelow ? bubbleShape.tailTipX : (bubbleShape.w - bubbleShape.r); y: root.placeBelow ? 0 : bubbleShape.bodyTop }
+      PathLine { x: root.placeBelow ? bubbleShape.tailX2 : (bubbleShape.w - bubbleShape.r); y: bubbleShape.bodyTop }
+      PathLine { x: bubbleShape.w - bubbleShape.r; y: bubbleShape.bodyTop }
+
+      // Top-right corner
+      PathArc { x: bubbleShape.w; y: bubbleShape.bodyTop + bubbleShape.r; radiusX: bubbleShape.r; radiusY: bubbleShape.r; direction: PathArc.Clockwise }
+
+      // Right edge
+      PathLine { x: bubbleShape.w; y: bubbleShape.bodyBot - bubbleShape.r }
+
+      // Bottom-right corner
+      PathArc { x: bubbleShape.w - bubbleShape.r; y: bubbleShape.bodyBot; radiusX: bubbleShape.r; radiusY: bubbleShape.r; direction: PathArc.Clockwise }
+
+      // Bottom edge (incorporates tail when pointing DOWN to Clippy)
+      PathLine { x: !root.placeBelow ? bubbleShape.tailX2 : bubbleShape.r; y: bubbleShape.bodyBot }
+      PathLine { x: !root.placeBelow ? bubbleShape.tailTipX : bubbleShape.r; y: !root.placeBelow ? bubbleShape.h : bubbleShape.bodyBot }
+      PathLine { x: !root.placeBelow ? bubbleShape.tailX1 : bubbleShape.r; y: bubbleShape.bodyBot }
+      PathLine { x: bubbleShape.r; y: bubbleShape.bodyBot }
+
+      // Bottom-left corner
+      PathArc { x: 0; y: bubbleShape.bodyBot - bubbleShape.r; radiusX: bubbleShape.r; radiusY: bubbleShape.r; direction: PathArc.Clockwise }
+
+      // Left edge
+      PathLine { x: 0; y: bubbleShape.bodyTop + bubbleShape.r }
+
+      // Top-left corner
+      PathArc { x: bubbleShape.r; y: bubbleShape.bodyTop; radiusX: bubbleShape.r; radiusY: bubbleShape.r; direction: PathArc.Clockwise }
     }
+  }
 
-    // Interior cover so the tail's internal border is hidden
-    Rectangle {
-      z: 0
-      color: "#fef9c3"
-      width: 16
-      height: 6
-      x: root.placeLeft ? 18 : (parent.width - 34)
-      y: root.placeBelow ? 0 : (parent.height - 6)
-    }
+  ColumnLayout {
+    anchors.fill: parent
+    anchors.leftMargin: 10
+    anchors.rightMargin: 8
+    anchors.topMargin: root.placeBelow ? (8 + root.tailHeight) : 8
+    anchors.bottomMargin: !root.placeBelow ? (8 + root.tailHeight) : 8
+    spacing: 6
 
-    ColumnLayout {
-      anchors.fill: parent
-      anchors.leftMargin: 10
-      anchors.rightMargin: 8
-      anchors.topMargin: 8
-      anchors.bottomMargin: 8
-      spacing: 6
-
-      // Top Row: Content & Close Button
-      RowLayout {
+    // Top Row: Content & Close Button
+    RowLayout {
         Layout.fillWidth: true
         Layout.fillHeight: true
         spacing: 6
@@ -309,4 +387,3 @@ Item {
       }
     }
   }
-}
