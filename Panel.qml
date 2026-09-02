@@ -55,6 +55,10 @@ Panel {
     var out = []
     for (var i = 0; i < list.length; i++) {
       var a = list[i]
+      // Ensure the animation actually exists in the Clippy sprite sheet
+      var realAnim = AnimData.getAnimation(a.id)
+      if (!realAnim || !realAnim.frames || realAnim.frames.length === 0) continue
+
       if (cat !== "all" && a.category !== cat) continue
       if (q.length > 0) {
         var matchId = a.id.toLowerCase().indexOf(q) !== -1
