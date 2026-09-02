@@ -77,13 +77,13 @@ Item {
   }
 
   function speak(text, durationMs) {
-    fullText = text
+    fullText = String(text || "").substring(0, 500)
     displayedText = ""
     active = true
     typewriterIndex = 0
     typewriterTimer.restart()
 
-    var autoDuration = durationMs || Math.max(4500, text.length * 90)
+    var autoDuration = Math.min(30000, Math.max(500, Number(durationMs) || Math.max(4500, fullText.length * 90)))
     autoCloseTimer.interval = autoDuration
     autoCloseTimer.restart()
   }
@@ -279,6 +279,7 @@ Item {
               clip: true
               selectByMouse: true
               focus: root.isPromptMode
+              maximumLength: 500
 
               Text {
                 text: "Pergunte ao Agente... (Enter para enviar)"

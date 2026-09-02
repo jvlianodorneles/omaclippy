@@ -22,6 +22,7 @@ Item {
 
   readonly property real baseWidth: 124
   readonly property real baseHeight: 93
+  readonly property string pwPlayBin: "/usr/bin/pw-play"
 
   implicitWidth: Math.round(baseWidth * scaleFactor)
   implicitHeight: Math.round(baseHeight * scaleFactor)
@@ -37,7 +38,8 @@ Item {
   readonly property string soundsDir: Qt.resolvedUrl("assets/sounds/").toString().replace("file://", "")
 
   function play(animName, shouldLoop) {
-    var anim = AnimData.getAnimation(animName)
+    var safeName = String(animName || "").trim().substring(0, 40)
+    var anim = AnimData.getAnimation(safeName)
     if (!anim || !anim.frames || anim.frames.length === 0) {
       currentAnimation = "RestPose"
       animObject = AnimData.getAnimation("RestPose")
@@ -46,7 +48,7 @@ Item {
       return
     }
 
-    currentAnimation = animName
+    currentAnimation = safeName
     animObject = anim
     loop = (shouldLoop === true)
     currentFrameIndex = 0
@@ -56,8 +58,10 @@ Item {
 
   function playSound(soundId) {
     if (!soundEnabled || soundVolume <= 0 || !soundId) return
-    var filePath = soundsDir + soundId + ".mp3"
-    Quickshell.execDetached(["pw-play", "--volume", soundVolume.toFixed(2), filePath])
+    var safeSoundId = String(soundId).trim()
+    if (!/^[a-zA-Z0-9_-]+$/.test(safeSoundId) || safeSoundId.length > 20) return
+    var filePath = soundsDir + safeSoundId + ".mp3"
+    Quickshell.execDetached([pwPlayBin, "--volume", soundVolume.toFixed(2), filePath])
   }
 
   function applyFrame(idx) {

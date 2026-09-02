@@ -1,9 +1,28 @@
 #!/usr/bin/env bash
 # Omaclippy CLI Helper - Desktop Companion Controller
+# Security hardened: Resolves trusted executables once from allowlist and fails closed.
 
-set -e
+set -eo pipefail
 
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
+# Resolve trusted omarchy-shell binary
+OMARCHY_SHELL=""
+for cand in /usr/share/omarchy/bin/omarchy-shell /usr/bin/omarchy-shell /usr/local/bin/omarchy-shell; do
+  if [[ -f "$cand" && -x "$cand" ]]; then
+    OMARCHY_SHELL="$cand"
+    break
+  fi
+done
+
+# Resolve trusted python3 binary
+PYTHON3_BIN=""
+for cand in /usr/bin/python3 /usr/local/bin/python3 /bin/python3; do
+  if [[ -f "$cand" && -x "$cand" ]]; then
+    PYTHON3_BIN="$cand"
+    break
+  fi
+done
 
 usage() {
   cat << USAGE
@@ -59,57 +78,74 @@ if [[ -z "$cmd" || "$cmd" == "--help" || "$cmd" == "-h" ]]; then
   exit 0
 fi
 
+if [[ "$cmd" == "mcp" ]]; then
+  if [[ -z "$PYTHON3_BIN" ]]; then
+    echo "omaclippy: python3 executable not found in trusted directories" >&2
+    exit 1
+  fi
+  exec "$PYTHON3_BIN" "$DIR/mcp_server.py"
+fi
+
+if [[ -z "$OMARCHY_SHELL" ]]; then
+  echo "omaclippy: omarchy-shell executable not found in trusted directories" >&2
+  exit 1
+fi
+
 shift || true
+
+# Bounded string truncation (max 500 chars)
+truncate_str() {
+  local str="$1"
+  echo "${str:0:500}"
+}
 
 case "$cmd" in
   react)
     anim="${1:-Explain}"
-    msg="${2:-}"
-    omarchy-shell dorneles.omaclippy react "$anim" "$msg"
+    msg=$(truncate_str "${2:-}")
+    exec "$OMARCHY_SHELL" dorneles.omaclippy react "$anim" "$msg"
     ;;
   prompt)
-    omarchy-shell dorneles.omaclippy prompt
+    exec "$OMARCHY_SHELL" dorneles.omaclippy prompt
     ;;
   speak)
-    omarchy-shell dorneles.omaclippy speak "${1:-Hello!}"
+    msg=$(truncate_str "${1:-Hello!}")
+    exec "$OMARCHY_SHELL" dorneles.omaclippy speak "$msg"
     ;;
   play)
-    omarchy-shell dorneles.omaclippy play "${1:-random}"
+    exec "$OMARCHY_SHELL" dorneles.omaclippy play "${1:-random}"
     ;;
   tip)
-    omarchy-shell dorneles.omaclippy tip
+    exec "$OMARCHY_SHELL" dorneles.omaclippy tip
     ;;
   toggle)
-    omarchy-shell dorneles.omaclippy toggle
+    exec "$OMARCHY_SHELL" dorneles.omaclippy toggle
     ;;
   on)
-    omarchy-shell dorneles.omaclippy on
+    exec "$OMARCHY_SHELL" dorneles.omaclippy on
     ;;
   off)
-    omarchy-shell dorneles.omaclippy off
+    exec "$OMARCHY_SHELL" dorneles.omaclippy off
     ;;
   reset)
-    omarchy-shell dorneles.omaclippy resetPosition
+    exec "$OMARCHY_SHELL" dorneles.omaclippy resetPosition
     ;;
   setScale)
-    omarchy-shell dorneles.omaclippy setScale "$1"
+    exec "$OMARCHY_SHELL" dorneles.omaclippy setScale "$1"
     ;;
   setMode)
-    omarchy-shell dorneles.omaclippy setMode "$1"
+    exec "$OMARCHY_SHELL" dorneles.omaclippy setMode "$1"
     ;;
   status)
-    omarchy-shell dorneles.omaclippy status
-    ;;
-  mcp)
-    exec python3 "$DIR/mcp_server.py"
+    exec "$OMARCHY_SHELL" dorneles.omaclippy status
     ;;
   *)
     # Direct animation / alias invocation
     if [[ $# -eq 0 ]]; then
-      omarchy-shell dorneles.omaclippy play "$cmd"
+      exec "$OMARCHY_SHELL" dorneles.omaclippy play "$cmd"
     else
-      msg="$1"
-      omarchy-shell dorneles.omaclippy react "$cmd" "$msg"
+      msg=$(truncate_str "$1")
+      exec "$OMARCHY_SHELL" dorneles.omaclippy react "$cmd" "$msg"
     fi
     ;;
 esac

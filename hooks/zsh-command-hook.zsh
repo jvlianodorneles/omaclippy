@@ -7,6 +7,16 @@
 _omaclippy_cmd_start_time=0
 _omaclippy_last_cmd=""
 
+_omaclippy_resolve_bin() {
+  for cand in "$HOME/.config/omarchy/plugins/dorneles.omaclippy/bin/omaclippy" /usr/local/bin/omaclippy /usr/bin/omaclippy; do
+    if [[ -f "$cand" && -x "$cand" ]]; then
+      echo "$cand"
+      return 0
+    fi
+  done
+  return 1
+}
+
 _omaclippy_preexec() {
   _omaclippy_cmd_start_time=$EPOCHSECONDS
   _omaclippy_last_cmd="$1"
@@ -22,16 +32,17 @@ _omaclippy_precmd() {
     if (( duration >= 8 )); then
       local base_cmd="${_omaclippy_last_cmd%% *}"
       base_cmd="${base_cmd//[^a-zA-Z0-9_.-]/}"
+      base_cmd="${base_cmd:0:40}"
       if [[ -z "$base_cmd" ]]; then
         base_cmd="Command"
       fi
-      if (( exit_code == 0 )); then
-        if command -v omaclippy >/dev/null 2>&1; then
-          omaclippy done "${base_cmd} completed successfully in ${duration}s!" >/dev/null 2>&1 &
-        fi
-      else
-        if command -v omaclippy >/dev/null 2>&1; then
-          omaclippy alert "Error running ${base_cmd} (exit code ${exit_code}) after ${duration}s!" >/dev/null 2>&1 &
+
+      local bin
+      if bin=$(_omaclippy_resolve_bin); then
+        if (( exit_code == 0 )); then
+          "$bin" done "${base_cmd} completed successfully in ${duration}s!" >/dev/null 2>&1 &
+        else
+          "$bin" alert "Error running ${base_cmd} (exit code ${exit_code}) after ${duration}s!" >/dev/null 2>&1 &
         fi
       fi
     fi

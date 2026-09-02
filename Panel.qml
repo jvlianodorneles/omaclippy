@@ -21,6 +21,7 @@ Panel {
 
   readonly property string stateDir: Quickshell.env("HOME") + "/.local/state/omarchy/omaclippy"
   readonly property string stateFilePath: stateDir + "/config.json"
+  readonly property string omarchyShellBin: "/usr/share/omarchy/bin/omarchy-shell"
 
   // Live state
   property bool clippyEnabled: true
@@ -34,63 +35,89 @@ Panel {
   property bool reactToWindows: true
   property bool reactToAgents: true
   property bool reactToSystem: true
+  property bool rawInputTracking: false
 
   property string currentTab: "actions" // "actions" | "settings"
   property bool tipFeedback: false
+
+  function parseAndValidateConfig(raw) {
+    if (!raw || typeof raw !== "string" || raw.length > 16384) return null
+    try {
+      var cfg = JSON.parse(raw)
+      if (!cfg || typeof cfg !== "object" || Array.isArray(cfg)) return null
+      var out = {}
+      if (typeof cfg.enabled === "boolean") out.enabled = cfg.enabled
+      if (["companion", "roam", "perch"].indexOf(cfg.mode) !== -1) out.mode = cfg.mode
+      if (["small", "normal", "large", "giant"].indexOf(cfg.scale) !== -1) out.scale = cfg.scale
+      if (typeof cfg.soundEnabled === "boolean") out.soundEnabled = cfg.soundEnabled
+      if (typeof cfg.soundVolume === "number" && isFinite(cfg.soundVolume)) {
+        out.soundVolume = Math.max(0.0, Math.min(1.0, cfg.soundVolume))
+      }
+      if (["calm", "normal", "frequent"].indexOf(cfg.idleFrequency) !== -1) out.idleFrequency = cfg.idleFrequency
+      if (typeof cfg.speechBubbles === "boolean") out.speechBubbles = cfg.speechBubbles
+      if (typeof cfg.reactToCursor === "boolean") out.reactToCursor = cfg.reactToCursor
+      if (typeof cfg.reactToWindows === "boolean") out.reactToWindows = cfg.reactToWindows
+      if (typeof cfg.reactToAgents === "boolean") out.reactToAgents = cfg.reactToAgents
+      if (typeof cfg.reactToSystem === "boolean") out.reactToSystem = cfg.reactToSystem
+      if (typeof cfg.rawInputTracking === "boolean") out.rawInputTracking = cfg.rawInputTracking
+      return out
+    } catch (e) {
+      return null
+    }
+  }
 
   FileView {
     id: configFile
     path: root.stateFilePath
     watchChanges: true
+    atomicWrites: true
     printErrors: false
 
     onFileChanged: reload()
     onLoaded: {
-      try {
-        var raw = text()
-        if (raw && raw.trim().length > 0) {
-          var cfg = JSON.parse(raw)
-          if (cfg) {
-            if (cfg.enabled !== undefined) root.clippyEnabled = Boolean(cfg.enabled)
-            if (cfg.mode !== undefined) root.clippyMode = String(cfg.mode)
-            if (cfg.scale !== undefined) root.clippyScale = String(cfg.scale)
-            if (cfg.soundEnabled !== undefined) root.soundEnabled = Boolean(cfg.soundEnabled)
-            if (cfg.soundVolume !== undefined) root.soundVolume = Number(cfg.soundVolume)
-            if (cfg.idleFrequency !== undefined) root.idleFrequency = String(cfg.idleFrequency)
-            if (cfg.speechBubbles !== undefined) root.speechBubbles = Boolean(cfg.speechBubbles)
-            if (cfg.reactToCursor !== undefined) root.reactToCursor = Boolean(cfg.reactToCursor)
-            if (cfg.reactToWindows !== undefined) root.reactToWindows = Boolean(cfg.reactToWindows)
-            if (cfg.reactToAgents !== undefined) root.reactToAgents = Boolean(cfg.reactToAgents)
-            if (cfg.reactToSystem !== undefined) root.reactToSystem = Boolean(cfg.reactToSystem)
-          }
-        }
-      } catch (e) {}
+      var cfg = root.parseAndValidateConfig(text())
+      if (cfg) {
+        if (cfg.enabled !== undefined) root.clippyEnabled = cfg.enabled
+        if (cfg.mode !== undefined) root.clippyMode = cfg.mode
+        if (cfg.scale !== undefined) root.clippyScale = cfg.scale
+        if (cfg.soundEnabled !== undefined) root.soundEnabled = cfg.soundEnabled
+        if (cfg.soundVolume !== undefined) root.soundVolume = cfg.soundVolume
+        if (cfg.idleFrequency !== undefined) root.idleFrequency = cfg.idleFrequency
+        if (cfg.speechBubbles !== undefined) root.speechBubbles = cfg.speechBubbles
+        if (cfg.reactToCursor !== undefined) root.reactToCursor = cfg.reactToCursor
+        if (cfg.reactToWindows !== undefined) root.reactToWindows = cfg.reactToWindows
+        if (cfg.reactToAgents !== undefined) root.reactToAgents = cfg.reactToAgents
+        if (cfg.reactToSystem !== undefined) root.reactToSystem = cfg.reactToSystem
+        if (cfg.rawInputTracking !== undefined) root.rawInputTracking = cfg.rawInputTracking
+      }
     }
   }
 
   function saveConfig() {
     try {
       var cfg = {
-        enabled: root.clippyEnabled,
-        mode: root.clippyMode,
-        scale: root.clippyScale,
-        soundEnabled: root.soundEnabled,
-        soundVolume: root.soundVolume,
-        idleFrequency: root.idleFrequency,
-        speechBubbles: root.speechBubbles,
-        reactToCursor: root.reactToCursor,
-        reactToWindows: root.reactToWindows,
-        reactToAgents: root.reactToAgents,
-        reactToSystem: root.reactToSystem
+        enabled: Boolean(root.clippyEnabled),
+        mode: String(root.clippyMode),
+        scale: String(root.clippyScale),
+        soundEnabled: Boolean(root.soundEnabled),
+        soundVolume: Number(Math.max(0, Math.min(1, root.soundVolume))),
+        idleFrequency: String(root.idleFrequency),
+        speechBubbles: Boolean(root.speechBubbles),
+        reactToCursor: Boolean(root.reactToCursor),
+        reactToWindows: Boolean(root.reactToWindows),
+        reactToAgents: Boolean(root.reactToAgents),
+        reactToSystem: Boolean(root.reactToSystem),
+        rawInputTracking: Boolean(root.rawInputTracking)
       }
       configFile.setText(JSON.stringify(cfg, null, 2) + "\n")
     } catch (e) {}
   }
 
   function callClippy(cmd, arg) {
-    var argv = ["omarchy-shell", "dorneles.omaclippy", cmd]
+    var safeCmd = String(cmd || "").trim().substring(0, 40)
+    var argv = [root.omarchyShellBin, "dorneles.omaclippy", safeCmd]
     if (arg !== undefined && arg !== null && String(arg).length > 0) {
-      argv.push(String(arg))
+      argv.push(String(arg).substring(0, 500))
     }
     Quickshell.execDetached(argv)
   }
@@ -125,7 +152,7 @@ Panel {
     bar: root.bar || (hostWidget ? hostWidget.bar : null)
     open: root.opened
     contentWidth: panel.fittedContentWidth(Style.space(340))
-    contentHeight: panel.fittedContentHeight(Math.min(Style.space(450), containerCol.implicitHeight))
+    contentHeight: panel.fittedContentHeight(Math.min(Style.space(480), containerCol.implicitHeight))
 
     Column {
       id: containerCol
@@ -242,7 +269,7 @@ Panel {
       Flickable {
         id: scrollArea
         width: parent.width
-        height: Math.min(Style.space(390), tabContent.implicitHeight)
+        height: Math.min(Style.space(420), tabContent.implicitHeight)
         contentWidth: width
         contentHeight: tabContent.implicitHeight
         clip: true
@@ -414,6 +441,7 @@ Panel {
                       font.pixelSize: Style.font.caption
                       clip: true
                       selectByMouse: true
+                      maximumLength: 500
 
                       Text {
                         anchors.fill: parent
@@ -606,7 +634,7 @@ Panel {
                 Toggle {
                   width: behaviorCol.width
                   label: "React to Pointer"
-                  description: "Glances at mouse movement"
+                  description: "Glances at mouse movement via Hyprland socket"
                   checked: root.reactToCursor
                   onClicked: {
                     root.reactToCursor = !root.reactToCursor
@@ -617,7 +645,7 @@ Panel {
                 Toggle {
                   width: behaviorCol.width
                   label: "React to Windows"
-                  description: "Perches on top of active windows"
+                  description: "Perches on top of active windows via Hyprland socket"
                   checked: root.reactToWindows
                   onClicked: {
                     root.reactToWindows = !root.reactToWindows
@@ -644,6 +672,18 @@ Panel {
                   onClicked: {
                     root.reactToSystem = !root.reactToSystem
                     root.saveConfig()
+                  }
+                }
+
+                Toggle {
+                  width: behaviorCol.width
+                  label: "Hardware Pointer Clicks (/dev/input)"
+                  description: "Low-level pointer click monitoring. Keyboards are never opened."
+                  checked: root.rawInputTracking
+                  onClicked: {
+                    root.rawInputTracking = !root.rawInputTracking
+                    root.saveConfig()
+                    root.callClippy("setRawInput", root.rawInputTracking ? "1" : "0")
                   }
                 }
               }

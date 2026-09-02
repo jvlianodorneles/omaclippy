@@ -13,6 +13,7 @@ BarWidget {
 
   readonly property string stateDir: Quickshell.env("HOME") + "/.local/state/omarchy/omaclippy"
   readonly property string stateFilePath: stateDir + "/config.json"
+  readonly property string omarchyShellBin: "/usr/share/omarchy/bin/omarchy-shell"
 
   // Mirrored state
   property bool clippyEnabled: true
@@ -56,26 +57,37 @@ BarWidget {
   onSettingsChanged: Qt.callLater(injectPanel)
   Component.onCompleted: Qt.callLater(injectPanel)
 
+  function parseAndValidateConfig(raw) {
+    if (!raw || typeof raw !== "string" || raw.length > 16384) return null
+    try {
+      var cfg = JSON.parse(raw)
+      if (!cfg || typeof cfg !== "object" || Array.isArray(cfg)) return null
+      var out = {}
+      if (typeof cfg.enabled === "boolean") out.enabled = cfg.enabled
+      if (["companion", "roam", "perch"].indexOf(cfg.mode) !== -1) out.mode = cfg.mode
+      if (["small", "normal", "large", "giant"].indexOf(cfg.scale) !== -1) out.scale = cfg.scale
+      return out
+    } catch (e) {
+      return null
+    }
+  }
+
   // Watch state file for changes
   FileView {
     id: configFile
     path: root.stateFilePath
     watchChanges: true
+    atomicWrites: true
     printErrors: false
 
     onFileChanged: reload()
     onLoaded: {
-      try {
-        var raw = text()
-        if (raw && raw.trim().length > 0) {
-          var cfg = JSON.parse(raw)
-          if (cfg) {
-            if (cfg.enabled !== undefined) root.clippyEnabled = Boolean(cfg.enabled)
-            if (cfg.mode !== undefined) root.clippyMode = String(cfg.mode)
-            if (cfg.scale !== undefined) root.clippyScale = String(cfg.scale)
-          }
-        }
-      } catch (e) {}
+      var cfg = root.parseAndValidateConfig(text())
+      if (cfg) {
+        if (cfg.enabled !== undefined) root.clippyEnabled = cfg.enabled
+        if (cfg.mode !== undefined) root.clippyMode = cfg.mode
+        if (cfg.scale !== undefined) root.clippyScale = cfg.scale
+      }
     }
   }
 
@@ -83,14 +95,14 @@ BarWidget {
     var willEnable = !root.clippyEnabled
     root.clippyEnabled = willEnable
     if (willEnable) {
-      Quickshell.execDetached(["omarchy-shell", "dorneles.omaclippy", "on"])
+      Quickshell.execDetached([root.omarchyShellBin, "dorneles.omaclippy", "on"])
     } else {
-      Quickshell.execDetached(["omarchy-shell", "dorneles.omaclippy", "off"])
+      Quickshell.execDetached([root.omarchyShellBin, "dorneles.omaclippy", "off"])
     }
   }
 
   function playRandom() {
-    Quickshell.execDetached(["omarchy-shell", "dorneles.omaclippy", "play", "random"])
+    Quickshell.execDetached([root.omarchyShellBin, "dorneles.omaclippy", "play", "random"])
   }
 
   implicitWidth: button.implicitWidth
@@ -105,8 +117,8 @@ BarWidget {
     dimmed: !root.clippyEnabled
 
     tooltipText: root.clippyEnabled
-      ? "Clippy Companion \u2014 Active (" + root.clippyMode + ")\n\u2022 Click: Open Control Panel\n\u2022 Right-click: Turn Off\n\u2022 Middle-click: Play Animation"
-      : "Clippy Companion \u2014 Paused\n\u2022 Click: Open Control Panel\n\u2022 Right-click: Turn On"
+      ? "Clippy Companion — Active (" + root.clippyMode + ")\n• Click: Open Control Panel\n• Right-click: Turn Off\n• Middle-click: Play Animation"
+      : "Clippy Companion — Paused\n• Click: Open Control Panel\n• Right-click: Turn On"
 
     onPressed: function(btnCode) {
       if (btnCode === Qt.RightButton) {

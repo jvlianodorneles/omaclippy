@@ -29,7 +29,7 @@
   "barWidget": {
     "displayName": "Clippy",
     "icon": "assets/icon.svg",
-    "description": "Clippy desktop companion \u2014 click to open control panel and trigger animations",
+    "description": "Clippy desktop companion — click to open control panel and trigger animations",
     "category": "Fun",
     "allowMultiple": false,
     "defaultSection": "right",
@@ -42,7 +42,8 @@
       "idleFrequency": "normal",
       "speechBubbles": true,
       "reactToCursor": true,
-      "reactToWindows": true
+      "reactToWindows": true,
+      "rawInputTracking": false
     },
     "schema": [
       {
@@ -96,14 +97,21 @@
         "type": "boolean",
         "label": "React to Cursor",
         "defaultValue": true,
-        "description": "Clippy glances in the direction of the mouse pointer."
+        "description": "Clippy glances in the direction of the mouse pointer via Hyprland sockets."
       },
       {
         "key": "reactToWindows",
         "type": "boolean",
         "label": "React to Windows",
         "defaultValue": true,
-        "description": "Clippy reacts to moving windows."
+        "description": "Clippy reacts to moving windows via Hyprland sockets."
+      },
+      {
+        "key": "rawInputTracking",
+        "type": "boolean",
+        "label": "Hardware Pointer Monitoring",
+        "defaultValue": false,
+        "description": "Optional low-level hardware pointer click monitoring (/dev/input). Disabled by default. Only pointer/touch devices are inspected when enabled; keyboards are never opened."
       }
     ]
   }

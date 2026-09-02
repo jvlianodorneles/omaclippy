@@ -2,9 +2,26 @@
 # Omaclippy Git Post-Commit Hook
 # Place in .git/hooks/post-commit or global git hooks
 
-COMMIT_MSG="$(git log -1 --pretty=%B | head -n 1 | tr '"' '\"')"
-if command -v omaclippy >/dev/null 2>&1; then
-  omaclippy react Save "Commit saved: $COMMIT_MSG" >/dev/null 2>&1 &
-elif command -v omarchy-shell >/dev/null 2>&1; then
-  omarchy-shell dorneles.omaclippy play Save >/dev/null 2>&1 &
+set -eo pipefail
+
+COMMIT_MSG="$(git log -1 --pretty=%B 2>/dev/null | head -n 1 | tr '"' '\"' | cut -c1-180 || true)"
+
+# Resolve trusted omaclippy or omarchy-shell
+OMACLIPPY_BIN=""
+for cand in "$HOME/.config/omarchy/plugins/dorneles.omaclippy/bin/omaclippy" /usr/local/bin/omaclippy /usr/bin/omaclippy; do
+  if [[ -f "$cand" && -x "$cand" ]]; then
+    OMACLIPPY_BIN="$cand"
+    break
+  fi
+done
+
+if [[ -n "$OMACLIPPY_BIN" ]]; then
+  "$OMACLIPPY_BIN" react Save "Commit saved: $COMMIT_MSG" >/dev/null 2>&1 &
+else
+  for cand in /usr/share/omarchy/bin/omarchy-shell /usr/bin/omarchy-shell /usr/local/bin/omarchy-shell; do
+    if [[ -f "$cand" && -x "$cand" ]]; then
+      "$cand" dorneles.omaclippy play Save >/dev/null 2>&1 &
+      break
+    fi
+  done
 fi

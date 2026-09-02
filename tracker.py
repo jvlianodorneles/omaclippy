@@ -11,8 +11,15 @@ battery status, and user inactivity/sleep states to stdout as JSON lines:
   {"system_event": "charger_connected", "message": "..."}
   {"system_event": "idle_sleep"}
   {"system_event": "user_wake"}
+
+Security Hardening:
+- Raw /dev/input device monitoring is DISABLED by default (opt-in via --enable-raw-input).
+- When raw input is enabled, keyboard devices are strictly excluded via ioctl capability inspection.
+- Executables (herdr) are resolved once from an allowlist of trusted absolute paths and fail closed.
+- Bounded process output, bounded sysfs reads, bounded socket buffers, and strict schema validation.
 """
 
+import argparse
 import errno
 import fcntl
 import glob
@@ -27,7 +34,9 @@ import sys
 import threading
 import time
 
+# --- Constants & Evdev Definitions ---
 EV_KEY = 0x01
+EV_REL = 0x02
 EV_ABS = 0x03
 
 BTN_LEFT = 0x110
@@ -45,6 +54,10 @@ ABS_Y = 0x01
 ABS_MT_POSITION_X = 0x35
 ABS_MT_POSITION_Y = 0x36
 
+# Common keyboard keys used to detect and exclude keyboard devices
+# (KEY_ESC=1, KEY_1=2, KEY_Q=16, KEY_ENTER=28, KEY_A=30, KEY_SPACE=57, KEY_Z=44)
+KEYBOARD_PROBE_KEYS = [1, 2, 16, 28, 30, 44, 57]
+
 # struct input_event
 FMT = "llHHi" if struct.calcsize("i") == 4 else "llHHI"
 SIZE = struct.calcsize(FMT)
@@ -57,10 +70,35 @@ BUTTON_NAMES = {
     BTN_EXTRA: "extra",
 }
 
+VALID_AGENT_STATUSES = {"idle", "working", "blocked", "done", "unknown"}
+MAX_HERDR_BYTES = 65536
+MAX_AGENTS_CARDINALITY = 50
+MAX_SOCKET_BUFFER_BYTES = 16384
+
+TRUSTED_DIRS = ("/usr/bin", "/usr/local/bin", "/usr/share/omarchy/bin", "/bin")
+
 running = True
 stdout_lock = threading.Lock()
 last_activity_time = time.monotonic()
 is_user_asleep = False
+
+
+def resolve_trusted_executable(candidates):
+    """Resolves an executable from a strict allowlist of paths and fails closed."""
+    for cand in candidates:
+        if not cand or not os.path.isabs(cand):
+            continue
+        try:
+            real = os.path.realpath(cand)
+            if any(real.startswith(d + "/") or real == d for d in TRUSTED_DIRS):
+                if os.path.isfile(real) and os.access(real, os.X_OK):
+                    return real
+        except (OSError, ValueError):
+            continue
+    return None
+
+
+HERDR_BIN = resolve_trusted_executable(["/usr/bin/herdr", "/usr/local/bin/herdr"])
 
 
 def _signal_handler(_sig, _frame):
@@ -72,6 +110,13 @@ def _signal_handler(_sig, _frame):
 signal.signal(signal.SIGINT, _signal_handler)
 signal.signal(signal.SIGTERM, _signal_handler)
 signal.signal(signal.SIGHUP, _signal_handler)
+
+
+def sanitize_str(val, max_len=200):
+    if val is None:
+        return ""
+    val = str(val).strip()
+    return val[:max_len]
 
 
 def emit(data):
@@ -97,63 +142,74 @@ def system_hardware_watcher():
     known_herdr_states = {}
     last_ac_state = None
     low_battery_warned = False
-    time.sleep(2.0)
+    time.sleep(1.0)
 
     while running:
-        # 1. Herdr Agent Watcher
-        try:
-            res = subprocess.run(
-                ["herdr", "agent", "list"],
-                capture_output=True,
-                text=True,
-                timeout=3
-            )
-            if res.returncode == 0 and res.stdout.strip():
+        # 1. Herdr Agent Watcher (Executed only via validated absolute path)
+        if HERDR_BIN is not None:
+            try:
+                proc = subprocess.Popen(
+                    [HERDR_BIN, "agent", "list"],
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.DEVNULL,
+                    text=True,
+                )
                 try:
-                    payload = json.loads(res.stdout)
-                    agents = payload.get("result", {}).get("agents", [])
-                    if isinstance(agents, list):
-                        for a in agents:
-                            key = a.get("pane_id") or a.get("name") or "Agent"
-                            name = a.get("name") or a.get("agent") or a.get("pane_id") or "Agent"
-                            status = a.get("agent_status", "unknown")
-                            prev_status = known_herdr_states.get(key)
+                    stdout_data, _ = proc.communicate(timeout=3.0)
+                    if stdout_data and len(stdout_data) <= MAX_HERDR_BYTES:
+                        payload = json.loads(stdout_data.strip())
+                        if isinstance(payload, dict):
+                            result_obj = payload.get("result", {})
+                            if isinstance(result_obj, dict):
+                                agents = result_obj.get("agents", [])
+                                if isinstance(agents, list):
+                                    for a in agents[:MAX_AGENTS_CARDINALITY]:
+                                        if not isinstance(a, dict):
+                                            continue
+                                        raw_key = a.get("pane_id") or a.get("name") or "Agent"
+                                        key = sanitize_str(raw_key, max_len=64)
+                                        raw_name = a.get("name") or a.get("agent") or a.get("pane_id") or "Agent"
+                                        name = sanitize_str(raw_name, max_len=64)
+                                        raw_status = a.get("agent_status", "unknown")
+                                        status = raw_status if raw_status in VALID_AGENT_STATUSES else "unknown"
+                                        prev_status = known_herdr_states.get(key)
 
-                            if prev_status is not None and prev_status != status:
-                                if status == "blocked":
-                                    emit({
-                                        "agent_event": "blocked",
-                                        "agent": name,
-                                        "message": f"⚠️ Agente '{name}' está bloqueado e aguarda sua resposta!"
-                                    })
-                                elif status == "done":
-                                    emit({
-                                        "agent_event": "done",
-                                        "agent": name,
-                                        "message": f"🎉 Agente '{name}' concluiu sua tarefa com sucesso!"
-                                    })
-                                elif status == "working" and prev_status in ("idle", "unknown", "done", "blocked"):
-                                    emit({
-                                        "agent_event": "working",
-                                        "agent": name,
-                                        "message": f"Agente '{name}' começou a trabalhar..."
-                                    })
+                                        if prev_status is not None and prev_status != status:
+                                            if status == "blocked":
+                                                emit({
+                                                    "agent_event": "blocked",
+                                                    "agent": name,
+                                                    "message": f"⚠️ Agente '{name}' está bloqueado e aguarda sua resposta!"[:200]
+                                                })
+                                            elif status == "done":
+                                                emit({
+                                                    "agent_event": "done",
+                                                    "agent": name,
+                                                    "message": f"🎉 Agente '{name}' concluiu sua tarefa com sucesso!"[:200]
+                                                })
+                                            elif status == "working" and prev_status in ("idle", "unknown", "done", "blocked"):
+                                                emit({
+                                                    "agent_event": "working",
+                                                    "agent": name,
+                                                    "message": f"Agente '{name}' começou a trabalhar..."[:200]
+                                                })
 
-                            known_herdr_states[key] = status
-                except Exception:
-                    pass
-        except Exception:
-            pass
+                                        known_herdr_states[key] = status
+                except (subprocess.TimeoutExpired, json.JSONDecodeError, Exception):
+                    proc.kill()
+            except Exception:
+                pass
 
-        # 2. Battery & AC Power Monitor
+        # 2. Battery & AC Power Monitor (Bounded sysfs file reads)
         try:
-            # Check AC Online
             ac_online = None
             for ac_path in glob.glob("/sys/class/power_supply/AC*/online"):
                 try:
                     with open(ac_path, "r") as f:
-                        ac_online = int(f.read().strip())
-                        break
+                        raw = f.read(64).strip()
+                        if raw.isdigit():
+                            ac_online = int(raw)
+                            break
                 except Exception:
                     pass
 
@@ -167,12 +223,16 @@ def system_hardware_watcher():
             for bat_path in glob.glob("/sys/class/power_supply/BAT*/capacity"):
                 try:
                     with open(bat_path, "r") as f:
-                        cap = int(f.read().strip())
+                        raw_cap = f.read(64).strip()
+                        if not raw_cap.isdigit():
+                            continue
+                        cap = max(0, min(100, int(raw_cap)))
+
                     status_path = bat_path.replace("capacity", "status")
                     stat = "Discharging"
                     if os.path.exists(status_path):
                         with open(status_path, "r") as f:
-                            stat = f.read().strip()
+                            stat = f.read(64).strip()
 
                     if cap <= 15 and stat == "Discharging":
                         if not low_battery_warned:
@@ -226,7 +286,10 @@ def query_cursorpos(sock_path):
             data = s.recv(128).decode("utf-8", errors="ignore").strip()
             if "," in data:
                 parts = data.split(",")
-                return int(parts[0].strip()), int(parts[1].strip())
+                px = int(parts[0].strip())
+                py = int(parts[1].strip())
+                if -10000 <= px <= 50000 and -10000 <= py <= 50000:
+                    return px, py
         finally:
             s.close()
     except Exception:
@@ -244,21 +307,20 @@ def query_activewindow(sock_path):
             s.connect(sock_path)
             s.sendall(b"j/activewindow")
             data = b""
-            while True:
+            while len(data) < MAX_SOCKET_BUFFER_BYTES:
                 chunk = s.recv(4096)
                 if not chunk:
                     break
                 data += chunk
             win = json.loads(data.decode("utf-8", errors="ignore"))
-            at = win.get("at")
-            size = win.get("size")
-            if at and size and len(at) >= 2 and len(size) >= 2:
-                return {
-                    "x": at[0],
-                    "y": at[1],
-                    "width": size[0],
-                    "height": size[1],
-                }
+            if isinstance(win, dict):
+                at = win.get("at")
+                size = win.get("size")
+                if isinstance(at, list) and isinstance(size, list) and len(at) >= 2 and len(size) >= 2:
+                    wx, wy = int(at[0]), int(at[1])
+                    ww, wh = int(size[0]), int(size[1])
+                    if -10000 <= wx <= 50000 and -10000 <= wy <= 50000 and 0 <= ww <= 50000 and 0 <= wh <= 50000:
+                        return {"x": wx, "y": wy, "width": ww, "height": wh}
         finally:
             s.close()
     except Exception:
@@ -266,27 +328,57 @@ def query_activewindow(sock_path):
     return None
 
 
+def _test_bit(bit, byte_array):
+    return bool(byte_array[bit // 8] & (1 << (bit % 8)))
+
+
 def open_pointer_devices():
+    """Narrowly scopes device opening to pointer/mouse/touchpad devices ONLY.
+    
+    Excludes any device that emits standard keyboard keys to prevent unauthorized
+    keystroke monitoring.
+    """
     devices = {}
     for path in glob.glob("/dev/input/event*"):
         try:
             fd = os.open(path, os.O_RDONLY | os.O_NONBLOCK)
-            ev_mask = bytearray(8)
             try:
+                ev_mask = bytearray(8)
                 fcntl.ioctl(fd, 0x80084520, ev_mask)  # EVIOCGBIT(0, 8)
                 has_key = bool(ev_mask[0] & (1 << EV_KEY))
+                has_rel = bool(ev_mask[0] & (1 << EV_REL))
                 has_abs = bool(ev_mask[0] & (1 << EV_ABS))
-            except Exception:
-                has_key, has_abs = True, True
 
-            if has_key or has_abs:
-                devices[fd] = {
-                    "path": path,
-                    "touch_start": 0.0,
-                    "touch_moved": False,
-                    "finger_count": 1,
-                }
-            else:
+                if not (has_rel or has_abs):
+                    os.close(fd)
+                    continue
+
+                key_mask = bytearray(64)
+                if has_key:
+                    fcntl.ioctl(fd, 0x80404521, key_mask)  # EVIOCGBIT(EV_KEY, 64)
+
+                # Strict Keyboard Exclusion: if device has standard keyboard keys, close it immediately
+                if any(_test_bit(k, key_mask) for k in KEYBOARD_PROBE_KEYS):
+                    os.close(fd)
+                    continue
+
+                # Must have pointer buttons or touch capability
+                has_mouse_btn = (
+                    _test_bit(BTN_LEFT, key_mask)
+                    or _test_bit(BTN_TOUCH, key_mask)
+                    or _test_bit(BTN_TOOL_FINGER, key_mask)
+                )
+
+                if has_mouse_btn or (has_rel and not has_key):
+                    devices[fd] = {
+                        "path": path,
+                        "touch_start": 0.0,
+                        "touch_moved": False,
+                        "finger_count": 1,
+                    }
+                else:
+                    os.close(fd)
+            except Exception:
                 os.close(fd)
         except (PermissionError, OSError):
             continue
@@ -294,12 +386,23 @@ def open_pointer_devices():
 
 
 def main():
+    parser = argparse.ArgumentParser(description="Omaclippy Tracker Daemon")
+    parser.add_argument(
+        "--enable-raw-input",
+        action="store_true",
+        default=False,
+        help="Explicit opt-in to monitor hardware pointer click devices (/dev/input). Keyboards are never opened."
+    )
+    args, _ = parser.parse_known_args()
+
     # Start background watcher
     watcher_thread = threading.Thread(target=system_hardware_watcher, daemon=True)
     watcher_thread.start()
 
     cmd_sock, event_sock = get_hyprland_socket_paths()
-    devices = open_pointer_devices()
+    
+    # Open pointer devices only upon informed opt-in
+    devices = open_pointer_devices() if args.enable_raw_input else {}
 
     last_x, last_y = -9999, -9999
     last_win = None
@@ -344,6 +447,8 @@ def main():
                                 s_event = None
                                 continue
                             event_buf += chunk
+                            if len(event_buf) > MAX_SOCKET_BUFFER_BYTES:
+                                event_buf = event_buf[-4096:]
                             lines = event_buf.split("\n")
                             event_buf = lines[-1]
                             window_event = False

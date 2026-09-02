@@ -2,8 +2,23 @@
 # Omaclippy Git Pre-Push Hook
 # Place in .git/hooks/pre-push or global git hooks
 
-if command -v omaclippy >/dev/null 2>&1; then
-  omaclippy react SendMail "Pushing commits to remote repository..." >/dev/null 2>&1 &
-elif command -v omarchy-shell >/dev/null 2>&1; then
-  omarchy-shell dorneles.omaclippy play SendMail >/dev/null 2>&1 &
+set -eo pipefail
+
+OMACLIPPY_BIN=""
+for cand in "$HOME/.config/omarchy/plugins/dorneles.omaclippy/bin/omaclippy" /usr/local/bin/omaclippy /usr/bin/omaclippy; do
+  if [[ -f "$cand" && -x "$cand" ]]; then
+    OMACLIPPY_BIN="$cand"
+    break
+  fi
+done
+
+if [[ -n "$OMACLIPPY_BIN" ]]; then
+  "$OMACLIPPY_BIN" react SendMail "Pushing commits to remote repository..." >/dev/null 2>&1 &
+else
+  for cand in /usr/share/omarchy/bin/omarchy-shell /usr/bin/omarchy-shell /usr/local/bin/omarchy-shell; do
+    if [[ -f "$cand" && -x "$cand" ]]; then
+      "$cand" dorneles.omaclippy play SendMail >/dev/null 2>&1 &
+      break
+    fi
+  done
 fi

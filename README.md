@@ -29,6 +29,21 @@ Omaclippy runs out-of-the-box on Omarchy Linux with zero third-party package com
 
 ---
 
+## 🛡️ Security Architecture & Defensive Hardening
+
+Omaclippy follows a defense-in-depth security model adhering to strict packaging standards:
+
+- **🔒 No Background Keyboard Access / Opt-in Pointer Monitoring:** By default, all cursor position and window movement events are monitored non-invasively through Hyprland's user IPC sockets (`cursorpos` and `socket2.sock`). Direct device reading (`/dev/input/event*`) is disabled by default (`rawInputTracking: false`). When explicitly enabled, keyboard devices are inspected via `ioctl` capability bitmasks and **strictly excluded and closed**; only pointer/mouse/touch devices without keyboard keys can ever be opened.
+- **🛡️ Fail-Closed Trusted Executable Resolution:** Background daemons, MCP servers, and CLI helpers resolve executables (`python3`, `herdr`, `pw-play`, `omarchy`, `omarchy-shell`) once from an allowlist of trusted system directories (`/usr/bin`, `/usr/share/omarchy/bin`, `/usr/local/bin`, `/bin`) and **fail closed**. No ambient `PATH` lookup is performed in long-lived background loops.
+- **📏 Strict Producer & Consumer Bounds:**
+  - `herdr agent list` process execution is bounded to 64 KB output, with schema validation and cardinality caps (max 50 agents).
+  - MCP JSON-RPC stdio rejects any single input line exceeding 64 KB before JSON parsing.
+  - QML `SplitParser` enforces 4 KB line caps, coordinate clamping, and finite event validation.
+  - Speech bubble text is capped at 500 characters, and timers are strictly clamped between 500ms and 30000ms.
+- **💾 Hardened State Boundaries & Atomic Persistence:** State configuration is stored at `~/.local/state/omarchy/omaclippy/config.json` with `0700` directory permissions, symlink rejection, regular-file validation, atomic file replacements (`atomicWrites: true`), and strict finite enumerated schema parsing.
+
+---
+
 ## 🚀 Installation
 
 ### 1. Clone the plugin to your Omarchy plugins directory:

@@ -53,12 +53,19 @@ PanelWindow {
   property bool reactToWindows: true
   property bool reactToAgents: true
   property bool reactToSystem: true
+  property bool rawInputTracking: false
 
-  // State Persistence
+  // State Persistence & Trusted Path Bounds
   readonly property string stateDir: Quickshell.env("HOME") + "/.local/state/omarchy/omaclippy"
   readonly property string stateFilePath: stateDir + "/config.json"
   readonly property string dirFs: Qt.resolvedUrl(".").toString().replace("file://", "")
   readonly property string soundsDir: Qt.resolvedUrl("assets/sounds/").toString().replace("file://", "")
+
+  // Trusted Absolute Binaries
+  readonly property string pythonBin: "/usr/bin/python3"
+  readonly property string pwPlayBin: "/usr/bin/pw-play"
+  readonly property string omarchyBin: "/usr/share/omarchy/bin/omarchy"
+  readonly property string omarchyShellBin: "/usr/share/omarchy/bin/omarchy-shell"
 
   // Scale Factors
   readonly property real scaleFactor: {
@@ -139,9 +146,9 @@ PanelWindow {
   function playSound(soundId) {
     if (!root.soundEnabled || root.soundVolume <= 0 || !soundId) return
     var safeSoundId = String(soundId).trim()
-    if (!/^[a-zA-Z0-9_-]+$/.test(safeSoundId)) return
+    if (!/^[a-zA-Z0-9_-]+$/.test(safeSoundId) || safeSoundId.length > 20) return
     var filePath = root.soundsDir + safeSoundId + ".mp3"
-    Quickshell.execDetached(["pw-play", "--volume", root.soundVolume.toFixed(2), filePath])
+    Quickshell.execDetached([root.pwPlayBin, "--volume", root.soundVolume.toFixed(2), filePath])
   }
 
   function applyFrame(idx) {
@@ -231,7 +238,8 @@ PanelWindow {
   }
 
   function playAnimation(animName) {
-    var anim = AnimData.getAnimation(animName)
+    var safeName = String(animName || "").trim().substring(0, 40)
+    var anim = AnimData.getAnimation(safeName)
     if (!anim || !anim.frames || anim.frames.length === 0) {
       root.currentAnim = "RestPose"
       root.currentAnimObj = AnimData.getAnimation("RestPose")
@@ -243,13 +251,13 @@ PanelWindow {
     }
 
     root.animLoopCount = 0
-    root.isCustomPlaying = (animName !== "RestPose")
-    root.currentAnim = anim.name || animName
+    root.isCustomPlaying = (safeName !== "RestPose")
+    root.currentAnim = anim.name || safeName
     root.currentAnimObj = anim
     root.currentFrameIdx = 0
     root.applyFrame(0)
 
-    if (animName !== "RestPose") {
+    if (safeName !== "RestPose") {
       var timeout = Math.max(8000, (anim.totalDuration || 3000) * 2.5)
       safetyTimer.interval = timeout
       safetyTimer.restart()
@@ -274,16 +282,32 @@ PanelWindow {
   // -------------------------------------------------------------
   function speak(text, durationMs, buttons) {
     if (!root.clippyEnabled || !root.speechBubbles) return
+    var cleanText = String(text || "").substring(0, 500)
     root.promptActive = false
     bubbleItem.isPromptMode = false
-    root.currentActionButtons = buttons || []
-    root.speechFullText = text
+    
+    // Cardinality limit on buttons (max 5)
+    var cleanButtons = []
+    if (Array.isArray(buttons)) {
+      for (var i = 0; i < Math.min(5, buttons.length); i++) {
+        var b = buttons[i]
+        if (b && typeof b === "object") {
+          cleanButtons.push({
+            label: String(b.label || "").substring(0, 40),
+            action: String(b.action || "").substring(0, 40),
+            color: b.color ? String(b.color).substring(0, 20) : null
+          })
+        }
+      }
+    }
+    root.currentActionButtons = cleanButtons
+    root.speechFullText = cleanText
     root.speechDisplayedText = ""
     root.speechVisible = true
     root.speechTypewriterIdx = 0
     typewriterTimer.restart()
 
-    var autoDuration = durationMs || Math.max(5000, text.length * 90)
+    var autoDuration = Math.min(30000, Math.max(500, Number(durationMs) || Math.max(4500, cleanText.length * 90)))
     autoCloseSpeechTimer.interval = autoDuration
     autoCloseSpeechTimer.restart()
 
@@ -308,9 +332,10 @@ PanelWindow {
   function sendToNativeAgent(promptText) {
     root.promptActive = false
     bubbleItem.isPromptMode = false
+    var cleanPrompt = String(promptText || "").substring(0, 500)
     root.playAnimation("Thinking")
-    root.speak("Enviando para o agente: " + promptText, 4000)
-    Quickshell.execDetached(["omarchy", "agent", "prompt", promptText])
+    root.speak("Enviando para o agente: " + cleanPrompt, 4000)
+    Quickshell.execDetached([root.omarchyBin, "agent", "prompt", cleanPrompt])
   }
 
   function hideSpeech() {
@@ -350,54 +375,85 @@ PanelWindow {
   }
 
   // -------------------------------------------------------------
-  // Config Persistence
+  // Hardened Config Persistence & Schema Validation
   // -------------------------------------------------------------
+  Process {
+    id: ensureStateDirProc
+    command: ["bash", "-c", "mkdir -p -m 0700 \"$1\" && if [[ -L \"$2\" ]]; then rm -f \"$2\"; fi && if [[ -f \"$2\" ]]; then chmod 0600 \"$2\"; fi", "--", root.stateDir, root.stateFilePath]
+  }
+
+  function parseAndValidateConfig(raw) {
+    if (!raw || typeof raw !== "string" || raw.length > 16384) return null
+    try {
+      var cfg = JSON.parse(raw)
+      if (!cfg || typeof cfg !== "object" || Array.isArray(cfg)) return null
+      var out = {}
+      if (typeof cfg.enabled === "boolean") out.enabled = cfg.enabled
+      if (["companion", "roam", "perch"].indexOf(cfg.mode) !== -1) out.mode = cfg.mode
+      if (["small", "normal", "large", "giant"].indexOf(cfg.scale) !== -1) out.scale = cfg.scale
+      if (typeof cfg.soundEnabled === "boolean") out.soundEnabled = cfg.soundEnabled
+      if (typeof cfg.soundVolume === "number" && isFinite(cfg.soundVolume)) {
+        out.soundVolume = Math.max(0.0, Math.min(1.0, cfg.soundVolume))
+      }
+      if (["calm", "normal", "frequent"].indexOf(cfg.idleFrequency) !== -1) out.idleFrequency = cfg.idleFrequency
+      if (typeof cfg.speechBubbles === "boolean") out.speechBubbles = cfg.speechBubbles
+      if (typeof cfg.reactToCursor === "boolean") out.reactToCursor = cfg.reactToCursor
+      if (typeof cfg.reactToWindows === "boolean") out.reactToWindows = cfg.reactToWindows
+      if (typeof cfg.reactToAgents === "boolean") out.reactToAgents = cfg.reactToAgents
+      if (typeof cfg.reactToSystem === "boolean") out.reactToSystem = cfg.reactToSystem
+      if (typeof cfg.rawInputTracking === "boolean") out.rawInputTracking = cfg.rawInputTracking
+      if (typeof cfg.posX === "number" && isFinite(cfg.posX)) out.posX = Math.max(0, Math.min(32767, Math.round(cfg.posX)))
+      if (typeof cfg.posY === "number" && isFinite(cfg.posY)) out.posY = Math.max(0, Math.min(32767, Math.round(cfg.posY)))
+      return out
+    } catch (e) {
+      return null
+    }
+  }
+
   FileView {
     id: configFile
     path: root.stateFilePath
     watchChanges: true
+    atomicWrites: true
     printErrors: false
 
     onFileChanged: reload()
     onLoaded: {
-      try {
-        var raw = text()
-        if (raw && raw.trim().length > 0) {
-          var cfg = JSON.parse(raw)
-          if (cfg) {
-            if (cfg.enabled !== undefined) root.clippyEnabled = Boolean(cfg.enabled)
-            if (cfg.mode !== undefined) root.clippyMode = String(cfg.mode)
-            if (cfg.scale !== undefined) root.clippyScale = String(cfg.scale)
-            if (cfg.soundEnabled !== undefined) root.soundEnabled = Boolean(cfg.soundEnabled)
-            if (cfg.soundVolume !== undefined) root.soundVolume = Number(cfg.soundVolume)
-            if (cfg.idleFrequency !== undefined) root.idleFrequency = String(cfg.idleFrequency)
-            if (cfg.speechBubbles !== undefined) root.speechBubbles = Boolean(cfg.speechBubbles)
-            if (cfg.reactToCursor !== undefined) root.reactToCursor = Boolean(cfg.reactToCursor)
-            if (cfg.reactToWindows !== undefined) root.reactToWindows = Boolean(cfg.reactToWindows)
-            if (cfg.reactToAgents !== undefined) root.reactToAgents = Boolean(cfg.reactToAgents)
-            if (cfg.reactToSystem !== undefined) root.reactToSystem = Boolean(cfg.reactToSystem)
-            if (cfg.posX !== undefined && !root.isDragging) root.posX = Number(cfg.posX)
-            if (cfg.posY !== undefined && !root.isDragging) root.posY = Number(cfg.posY)
-          }
-        }
-      } catch (e) {}
+      var cfg = root.parseAndValidateConfig(text())
+      if (cfg) {
+        if (cfg.enabled !== undefined) root.clippyEnabled = cfg.enabled
+        if (cfg.mode !== undefined) root.clippyMode = cfg.mode
+        if (cfg.scale !== undefined) root.clippyScale = cfg.scale
+        if (cfg.soundEnabled !== undefined) root.soundEnabled = cfg.soundEnabled
+        if (cfg.soundVolume !== undefined) root.soundVolume = cfg.soundVolume
+        if (cfg.idleFrequency !== undefined) root.idleFrequency = cfg.idleFrequency
+        if (cfg.speechBubbles !== undefined) root.speechBubbles = cfg.speechBubbles
+        if (cfg.reactToCursor !== undefined) root.reactToCursor = cfg.reactToCursor
+        if (cfg.reactToWindows !== undefined) root.reactToWindows = cfg.reactToWindows
+        if (cfg.reactToAgents !== undefined) root.reactToAgents = cfg.reactToAgents
+        if (cfg.reactToSystem !== undefined) root.reactToSystem = cfg.reactToSystem
+        if (cfg.rawInputTracking !== undefined) root.rawInputTracking = cfg.rawInputTracking
+        if (cfg.posX !== undefined && !root.isDragging) root.posX = cfg.posX
+        if (cfg.posY !== undefined && !root.isDragging) root.posY = cfg.posY
+      }
     }
   }
 
   function saveConfig() {
     try {
       var cfg = {
-        enabled: root.clippyEnabled,
-        mode: root.clippyMode,
-        scale: root.clippyScale,
-        soundEnabled: root.soundEnabled,
-        soundVolume: root.soundVolume,
-        idleFrequency: root.idleFrequency,
-        speechBubbles: root.speechBubbles,
-        reactToCursor: root.reactToCursor,
-        reactToWindows: root.reactToWindows,
-        reactToAgents: root.reactToAgents,
-        reactToSystem: root.reactToSystem,
+        enabled: Boolean(root.clippyEnabled),
+        mode: String(root.clippyMode),
+        scale: String(root.clippyScale),
+        soundEnabled: Boolean(root.soundEnabled),
+        soundVolume: Number(Math.max(0, Math.min(1, root.soundVolume))),
+        idleFrequency: String(root.idleFrequency),
+        speechBubbles: Boolean(root.speechBubbles),
+        reactToCursor: Boolean(root.reactToCursor),
+        reactToWindows: Boolean(root.reactToWindows),
+        reactToAgents: Boolean(root.reactToAgents),
+        reactToSystem: Boolean(root.reactToSystem),
+        rawInputTracking: Boolean(root.rawInputTracking),
         posX: Math.round(root.posX),
         posY: Math.round(root.posY)
       }
@@ -521,6 +577,7 @@ PanelWindow {
   property string lastLookDirection: ""
 
   function updatePointer(x, y) {
+    if (!isFinite(x) || !isFinite(y)) return
     root.pointerX = x
     root.pointerY = y
 
@@ -560,6 +617,7 @@ PanelWindow {
   }
 
   function onWindowMoved(rect) {
+    if (!rect || !isFinite(rect.x) || !isFinite(rect.y) || !isFinite(rect.width) || !isFinite(rect.height)) return
     root.lastWindowRect = rect
     if (!root.reactToWindows || !root.clippyEnabled || root.isDragging) return
     if (root.clippyMode === "perch") {
@@ -574,7 +632,8 @@ PanelWindow {
   }
 
   function onScreenClick(btn, clickX, clickY) {
-    if (!root.reactToCursor || !root.clippyEnabled || root.isDragging || root.isCustomPlaying || root.promptActive) return
+    if (!root.rawInputTracking || !root.reactToCursor || !root.clippyEnabled || root.isDragging || root.isCustomPlaying || root.promptActive) return
+    if (!isFinite(clickX) || !isFinite(clickY)) return
     var dx = clickX - (root.posX + root.clippyWidth / 2)
     var dy = clickY - (root.posY + root.clippyHeight / 2)
     if (Math.hypot(dx, dy) < 180 && Math.random() < 0.25) {
@@ -583,46 +642,50 @@ PanelWindow {
   }
 
   // -------------------------------------------------------------
-  // Background Tracker Process
+  // Background Tracker Process (Bounded SplitParser & Validated Absolute Path)
   // -------------------------------------------------------------
   Process {
     id: trackerProc
-    command: ["python3", root.dirFs + "tracker.py"]
+    command: [root.pythonBin, root.dirFs + "tracker.py"].concat(root.rawInputTracking ? ["--enable-raw-input"] : [])
     running: root.clippyEnabled
 
     stdout: SplitParser {
       onRead: function(line) {
         var raw = String(line || "").trim()
-        if (!raw.startsWith("{")) return
+        if (raw.length === 0 || raw.length > 4096 || !raw.startsWith("{")) return
         try {
           var data = JSON.parse(raw)
-          if (data.cursor) {
+          if (!data || typeof data !== "object") return
+
+          if (data.cursor && isFinite(data.cursor.x) && isFinite(data.cursor.y)) {
             root.updatePointer(data.cursor.x, data.cursor.y)
           }
           if (data.window_moved && data.rect) {
             root.onWindowMoved(data.rect)
           }
-          if (data.click) {
+          if (data.click && typeof data.btn === "string" && isFinite(data.x) && isFinite(data.y)) {
             root.onScreenClick(data.btn, data.x, data.y)
           }
           if (data.agent_event && root.reactToAgents && root.clippyEnabled) {
+            var msg = String(data.message || "").substring(0, 300)
             if (data.agent_event === "blocked") {
               root.playAnimation("Alert")
-              root.speak(data.message || "Agent needs attention!")
+              root.speak(msg || "Agent needs attention!", 6000)
             } else if (data.agent_event === "done") {
               root.playAnimation("Congratulate")
-              root.speak(data.message || "Agent finished successfully!")
+              root.speak(msg || "Agent finished successfully!", 6000)
             } else if (data.agent_event === "working") {
               root.playAnimation("GetTechy")
             }
           }
           if (data.system_event && root.reactToSystem && root.clippyEnabled) {
+            var sysMsg = String(data.message || "").substring(0, 300)
             if (data.system_event === "low_battery") {
               root.playAnimation("Alert")
-              root.speak(data.message || "Bateria baixa!", 6000)
+              root.speak(sysMsg || "Bateria baixa!", 6000)
             } else if (data.system_event === "charger_connected") {
               root.playAnimation("Congratulate")
-              root.speak(data.message || "Carregador conectado!", 4000)
+              root.speak(sysMsg || "Carregador conectado!", 4000)
             } else if (data.system_event === "idle_sleep") {
               root.playAnimation("IdleSnooze")
             } else if (data.system_event === "user_wake") {
@@ -648,7 +711,7 @@ PanelWindow {
   }
 
   // -------------------------------------------------------------
-  // Public IPC Handler
+  // Public IPC Handler (Strict Input Bounding)
   // -------------------------------------------------------------
   IpcHandler {
     target: "dorneles.omaclippy"
@@ -672,23 +735,26 @@ PanelWindow {
     }
 
     function play(animName: string): string {
-      if (!animName || animName === "random") {
+      var clean = String(animName || "").trim().substring(0, 40)
+      if (!clean || clean === "random") {
         root.playRandomAction()
         return "playing random"
       }
-      root.playAnimation(animName)
-      return "playing " + animName
+      root.playAnimation(clean)
+      return "playing " + clean
     }
 
     function react(animName: string, msg: string): string {
-      root.playAnimation(animName || "Explain")
-      if (msg && String(msg).trim().length > 0) {
-        root.speechFullText = String(msg)
+      var cleanAnim = String(animName || "Explain").trim().substring(0, 40)
+      var cleanMsg = String(msg || "").substring(0, 500)
+      root.playAnimation(cleanAnim || "Explain")
+      if (cleanMsg.trim().length > 0) {
+        root.speechFullText = cleanMsg
         root.speechDisplayedText = ""
         root.speechVisible = true
         root.speechTypewriterIdx = 0
         typewriterTimer.restart()
-        var autoDuration = Math.max(5000, msg.length * 90)
+        var autoDuration = Math.min(30000, Math.max(500, cleanMsg.length * 90))
         autoCloseSpeechTimer.interval = autoDuration
         autoCloseSpeechTimer.restart()
       }
@@ -696,7 +762,7 @@ PanelWindow {
     }
 
     function speak(msg: string): string {
-      root.speak(msg || "Hello!")
+      root.speak(String(msg || "Hello!").substring(0, 500))
       return "speaking"
     }
 
@@ -746,12 +812,22 @@ PanelWindow {
 
     function setVolume(val: string): string {
       var v = parseFloat(val)
-      if (!isNaN(v) && v >= 0 && v <= 1.0) {
+      if (!isNaN(v) && isFinite(v) && v >= 0 && v <= 1.0) {
         root.soundVolume = v
         root.saveConfig()
         return "ok"
       }
       return "invalid volume"
+    }
+
+    function setRawInput(val: string): string {
+      root.rawInputTracking = (val === "true" || val === "1" || val === "on")
+      root.saveConfig()
+      if (trackerProc.running) {
+        trackerProc.running = false
+        trackerRestartTimer.restart()
+      }
+      return "ok"
     }
 
     function resetPosition(): string {
@@ -768,6 +844,7 @@ PanelWindow {
         scale: root.clippyScale,
         soundEnabled: root.soundEnabled,
         soundVolume: root.soundVolume,
+        rawInputTracking: root.rawInputTracking,
         currentAnim: root.currentAnim,
         currentFrameIdx: root.currentFrameIdx,
         frameCoords: [root.currentFrameX, root.currentFrameY],
@@ -906,6 +983,7 @@ PanelWindow {
   }
 
   Component.onCompleted: {
+    ensureStateDirProc.running = true
     if (root.posX === 350 && root.posY === 350) {
       var w = root.width > 0 ? root.width : 1920
       var h = root.height > 0 ? root.height : 1080
