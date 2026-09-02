@@ -45,12 +45,12 @@ Panel {
 
   // Animation browser state
   property string animSearchText: ""
-  property string animCategoryFilter: "all" // "all" | "work" | "emotes" | "idles" | "gestures"
+  property string animCategoryFilter: "work" // "work" | "emotes" | "idles" | "gestures"
   readonly property var allAnimations: AnimData.getAnimationCatalog()
 
   function getFilteredAnimations() {
     var list = root.allAnimations || []
-    var cat = root.animCategoryFilter
+    var cat = root.animCategoryFilter || "work"
     var q = root.animSearchText.trim().toLowerCase()
     var out = []
     for (var i = 0; i < list.length; i++) {
@@ -59,7 +59,7 @@ Panel {
       var realAnim = AnimData.getAnimation(a.id)
       if (!realAnim || !realAnim.frames || realAnim.frames.length === 0) continue
 
-      if (cat !== "all" && a.category !== cat) continue
+      if (q.length === 0 && a.category !== cat) continue
       if (q.length > 0) {
         var matchId = a.id.toLowerCase().indexOf(q) !== -1
         var matchLabel = a.label.toLowerCase().indexOf(q) !== -1
@@ -194,6 +194,12 @@ Panel {
     contentWidth: panel.fittedContentWidth(Style.space(370))
     contentHeight: panel.fittedContentHeight(Math.min(Style.space(520), containerCol.implicitHeight))
 
+    onOpenChanged: {
+      if (open) {
+        root.animCategoryFilter = "work"
+      }
+    }
+
     Column {
       id: containerCol
       width: parent.width
@@ -287,7 +293,7 @@ Panel {
         Button {
           Layout.fillWidth: true
           Layout.preferredHeight: Style.space(26)
-          text: "🎭 Actions (" + root.allAnimations.length + ")"
+          text: "🎭 Actions"
           selected: root.currentTab === "actions"
           bordered: true
           onClicked: root.currentTab = "actions"
@@ -497,11 +503,10 @@ Panel {
 
                   Repeater {
                     model: [
-                      { id: "all", label: "All" },
-                      { id: "work", label: "🛠️ Work" },
-                      { id: "emotes", label: "🎭 Emotes" },
-                      { id: "idles", label: "💤 Idles" },
-                      { id: "gestures", label: "👉 Gestures" }
+                      { id: "work", label: "🛠️ Work (8)" },
+                      { id: "emotes", label: "🎭 Emotes (12)" },
+                      { id: "idles", label: "💤 Idles (11)" },
+                      { id: "gestures", label: "👉 Gestures (12)" }
                     ]
 
                     delegate: Button {
