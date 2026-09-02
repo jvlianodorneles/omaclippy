@@ -11128,19 +11128,51 @@ function getRandomActionAnimation() {
 }
 
 var tips = [
-  "It looks like you're running Omarchy on Arch Linux! Need any tips?",
-  "Did you know? Press SUPER+Q to close any focused window!",
-  "Hyprland is running buttery smooth on Wayland.",
-  "Don't forget to stay hydrated while coding! 💧",
-  "It looks like you're writing code. Would you like assistance?",
-  "Press SUPER+Space or click the launcher to discover commands!",
-  "You can drag me anywhere on the desktop! Just click and hold.",
-  "Tip: Right-click me or click the bar icon to change my animation or scale!",
-  "Remember to commit your git changes before switching branches! 🚀",
-  "I see you working hard! Clippy believes in you! ✨",
-  "Fun fact: I was originally designed in 1997 for Microsoft Office!",
-  "Need to capture your screen? Try 'omarchy capture screenshot'!",
-  "Tip: You can change the theme anytime with 'omarchy theme set <name>'."
+  // Navigation & Menus
+  "Press Super + Space to open the Omarchy Menu for apps, actions, and settings!",
+  "Want just apps? Press Super + Alt + Space to open the dedicated Applications Menu.",
+  "Press Super + Return anytime to spawn a new terminal window!",
+  "Press Super + K to discover all main keybindings (Super + Alt + K for Tmux, Super + Ctrl + K for Herdr)!",
+
+  // Window Management
+  "Close any active window with Super + W or Super + Q. To close all windows at once, press Ctrl + Alt + Del!",
+  "Toggle windows between tiling and floating mode using Super + T.",
+  "Switch your terminal layout: Super + J toggles window splits between horizontal and vertical!",
+  "Lock your screen instantly with Super + Ctrl + L, or press Super + Escape for the System Power Menu.",
+
+  // Unified Clipboard & History
+  "Omarchy features unified clipboard shortcuts everywhere: Super + C to copy, Super + X to cut, Super + V to paste!",
+  "Need to access older copied items? Press Super + Ctrl + V to browse your complete Clipboard History!",
+
+  // Screenshots, Recording & OCR
+  "Everything you can grab hangs off PrintScreen: PrtScr takes a screenshot, Alt + PrtScr records screen video!",
+  "Need a color hex code? Press Super + PrtScr to activate the built-in color picker magnifier.",
+  "Extract text from images or video: hit Super + Ctrl + PrtScr to run OCR and copy text to your clipboard!",
+
+  // Themes & Styling
+  "Omarchy comes with 22 hand-crafted themes! Jump straight to the theme switcher with Super + Ctrl + Shift + Space.",
+  "You can change themes from your terminal anytime by running 'omarchy theme set <name>'.",
+
+  // Toggles, Modes & Sleep
+  "Press Super + Ctrl + O to open the Toggle Menu for Night Light, Do Not Disturb, and Stay Awake modes.",
+
+  // Reminders & Notices
+  "Set a countdown reminder with Super + Ctrl + R (e.g. 'omarchy reminder 10 \"Check deployment\"')!",
+  "Check current weather notices with Super + Ctrl + Alt + W, or configure your city with 'omarchy weather location'!",
+  "Press Super + Ctrl + Alt + T to display the current date and time notice.",
+
+  // AI & Development Tools
+  "AI coding agents are first-class citizens in Omarchy! Launchers for agy, claude, codex, and copilot are pre-wired.",
+  "Ask your local AI assistant questions directly using 'omarchy agent prompt <text>'!",
+
+  // Dotfiles & Configuration
+  "Pro tip: Never edit /usr/share/omarchy directly; place your customizations in ~/.config instead!",
+  "Explore all system tools, themes, and automation commands by running 'omarchy' in your terminal.",
+
+  // Clippy Companion Tips
+  "You can drag me anywhere across your multi-monitor desktop! Just click and hold.",
+  "Right-click me or click the bar icon to change animations, toggle sounds, or adjust my scale!",
+  "Remember to stay hydrated and take stretch breaks while coding! 💧"
 ];
 
 function getRandomTip() {
