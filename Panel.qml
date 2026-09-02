@@ -191,8 +191,8 @@ Panel {
     owner: root.barIdentity
     bar: root.bar || (hostWidget ? hostWidget.bar : null)
     open: root.opened
-    contentWidth: panel.fittedContentWidth(Style.space(370))
-    contentHeight: panel.fittedContentHeight(Math.min(Style.space(520), containerCol.implicitHeight))
+    contentWidth: panel.fittedContentWidth(Style.space(380))
+    contentHeight: panel.fittedContentHeight(Math.min(Style.space(540), containerCol.implicitHeight))
 
     onOpenChanged: {
       if (open) {
@@ -292,7 +292,8 @@ Panel {
 
         Button {
           Layout.fillWidth: true
-          Layout.preferredHeight: Style.space(26)
+          Layout.preferredHeight: Style.space(28)
+          fontSize: Style.font.caption
           text: "🎭 Actions"
           selected: root.currentTab === "actions"
           bordered: true
@@ -301,7 +302,8 @@ Panel {
 
         Button {
           Layout.fillWidth: true
-          Layout.preferredHeight: Style.space(26)
+          Layout.preferredHeight: Style.space(28)
+          fontSize: Style.font.caption
           text: "⚙️ Settings"
           selected: root.currentTab === "settings"
           bordered: true
@@ -315,7 +317,7 @@ Panel {
       Flickable {
         id: scrollArea
         width: parent.width
-        height: Math.min(Style.space(460), tabContent.implicitHeight)
+        height: Math.min(Style.space(470), tabContent.implicitHeight)
         contentWidth: width
         contentHeight: tabContent.implicitHeight
         clip: true
@@ -353,7 +355,8 @@ Panel {
 
                 Button {
                   Layout.fillWidth: true
-                  Layout.preferredHeight: Style.space(30)
+                  Layout.preferredHeight: Style.space(28)
+                  fontSize: Style.font.caption
                   text: root.clippyEnabled ? "Pause Clippy" : "Activate Clippy"
                   active: root.clippyEnabled
                   bordered: true
@@ -361,8 +364,9 @@ Panel {
                 }
 
                 Button {
-                  Layout.preferredWidth: Style.space(90)
-                  Layout.preferredHeight: Style.space(30)
+                  Layout.preferredWidth: Style.space(88)
+                  Layout.preferredHeight: Style.space(28)
+                  fontSize: Style.font.caption
                   text: root.tipFeedback ? "💡 Tip..." : "💡 Get Tip"
                   accent: "#f59e0b"
                   bordered: true
@@ -373,8 +377,9 @@ Panel {
                 }
 
                 Button {
-                  Layout.preferredWidth: Style.space(34)
-                  Layout.preferredHeight: Style.space(30)
+                  Layout.preferredWidth: Style.space(32)
+                  Layout.preferredHeight: Style.space(28)
+                  fontSize: Style.font.caption
                   text: "📍"
                   bordered: true
                   enabled: root.clippyEnabled
@@ -404,7 +409,7 @@ Panel {
                   Layout.fillWidth: true
 
                   Text {
-                    text: "ANIMATION GALLERY"
+                    text: "ANIMATIONS (" + root.getFilteredAnimations().length + ")"
                     color: Util.alpha(root.foreground, 0.7)
                     font.family: root.fontFamily
                     font.pixelSize: Style.font.caption
@@ -414,10 +419,11 @@ Panel {
                   Item { Layout.fillWidth: true }
 
                   Text {
-                    text: root.getFilteredAnimations().length + " of " + root.allAnimations.length
+                    text: root.animCategoryFilter.toUpperCase()
                     color: Util.alpha(root.foreground, 0.45)
                     font.family: root.fontFamily
                     font.pixelSize: Style.font.caption
+                    font.bold: true
                   }
                 }
 
@@ -456,7 +462,7 @@ Panel {
                       Text {
                         anchors.fill: parent
                         verticalAlignment: Text.AlignVCenter
-                        text: "Search animations (e.g. atom, wave, mail)..."
+                        text: "Search animations..."
                         color: Util.alpha(root.foreground, 0.4)
                         font.family: root.fontFamily
                         font.pixelSize: Style.font.caption
@@ -512,7 +518,9 @@ Panel {
                     delegate: Button {
                       required property var modelData
                       Layout.fillWidth: true
-                      Layout.preferredHeight: Style.space(22)
+                      Layout.preferredHeight: Style.space(24)
+                      fontSize: Style.font.caption
+                      horizontalPadding: Style.space(2)
                       text: modelData.label
                       selected: root.animCategoryFilter === modelData.id
                       bordered: true
@@ -521,11 +529,11 @@ Panel {
                   }
                 }
 
-                // Animation Buttons Grid
+                // Animation Buttons Grid (2 columns for full label fit)
                 GridLayout {
                   id: animGrid
                   Layout.fillWidth: true
-                  columns: 3
+                  columns: 2
                   rowSpacing: Style.space(4)
                   columnSpacing: Style.space(4)
 
@@ -535,7 +543,9 @@ Panel {
                     delegate: Button {
                       required property var modelData
                       Layout.fillWidth: true
-                      Layout.preferredHeight: Style.space(26)
+                      Layout.preferredHeight: Style.space(28)
+                      fontSize: Style.font.caption
+                      horizontalPadding: Style.space(6)
                       text: modelData.label + (modelData.hasSound ? " 🔊" : "")
                       bordered: true
                       enabled: root.clippyEnabled
@@ -632,6 +642,7 @@ Panel {
                   Button {
                     Layout.preferredWidth: Style.space(60)
                     Layout.preferredHeight: Style.space(28)
+                    fontSize: Style.font.caption
                     text: "Speak"
                     bordered: true
                     accent: Color.accent
@@ -697,6 +708,8 @@ Panel {
                       required property var modelData
                       Layout.fillWidth: true
                       Layout.preferredHeight: Style.space(26)
+                      fontSize: Style.font.caption
+                      horizontalPadding: Style.space(4)
                       text: modelData.label
                       selected: root.clippyMode === modelData.id
                       bordered: true
@@ -735,6 +748,8 @@ Panel {
                       required property var modelData
                       Layout.fillWidth: true
                       Layout.preferredHeight: Style.space(26)
+                      fontSize: Style.font.caption
+                      horizontalPadding: Style.space(2)
                       text: modelData.label
                       selected: root.clippyScale === modelData.id
                       bordered: true
@@ -772,6 +787,8 @@ Panel {
                       required property var modelData
                       Layout.fillWidth: true
                       Layout.preferredHeight: Style.space(26)
+                      fontSize: Style.font.caption
+                      horizontalPadding: Style.space(2)
                       text: modelData.label
                       selected: root.balloonSkin === modelData.id
                       bordered: true
@@ -833,7 +850,7 @@ Panel {
                     font.family: root.fontFamily
                     font.pixelSize: Style.font.caption
                     font.bold: true
-                    Layout.preferredWidth: Style.space(90)
+                    Layout.preferredWidth: Style.space(85)
                   }
 
                   RowLayout {
@@ -852,6 +869,8 @@ Panel {
                         required property var modelData
                         Layout.fillWidth: true
                         Layout.preferredHeight: Style.space(24)
+                        fontSize: Style.font.caption
+                        horizontalPadding: Style.space(2)
                         text: modelData.label
                         selected: Math.abs(root.soundVolume - modelData.val) < 0.05
                         bordered: true
@@ -867,6 +886,8 @@ Panel {
                   Button {
                     Layout.preferredWidth: Style.space(65)
                     Layout.preferredHeight: Style.space(24)
+                    fontSize: Style.font.caption
+                    horizontalPadding: Style.space(2)
                     text: "🔊 Test"
                     bordered: true
                     accent: Color.accent
