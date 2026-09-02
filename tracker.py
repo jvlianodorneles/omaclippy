@@ -133,7 +133,7 @@ def record_activity():
     last_activity_time = time.monotonic()
     if is_user_asleep:
         is_user_asleep = False
-        emit({"system_event": "user_wake", "message": "Estou de volta!"})
+        emit({"system_event": "user_wake", "message": "I'm back!"})
 
 
 def system_hardware_watcher():
@@ -179,19 +179,19 @@ def system_hardware_watcher():
                                                 emit({
                                                     "agent_event": "blocked",
                                                     "agent": name,
-                                                    "message": f"⚠️ Agente '{name}' está bloqueado e aguarda sua resposta!"[:200]
+                                                    "message": f"⚠️ Agent '{name}' is blocked and waiting for your response!"[:200]
                                                 })
                                             elif status == "done":
                                                 emit({
                                                     "agent_event": "done",
                                                     "agent": name,
-                                                    "message": f"🎉 Agente '{name}' concluiu sua tarefa com sucesso!"[:200]
+                                                    "message": f"🎉 Agent '{name}' completed its task successfully!"[:200]
                                                 })
                                             elif status == "working" and prev_status in ("idle", "unknown", "done", "blocked"):
                                                 emit({
                                                     "agent_event": "working",
                                                     "agent": name,
-                                                    "message": f"Agente '{name}' começou a trabalhar..."[:200]
+                                                    "message": f"Agent '{name}' started working..."[:200]
                                                 })
 
                                         known_herdr_states[key] = status
@@ -216,7 +216,7 @@ def system_hardware_watcher():
             if ac_online is not None:
                 if last_ac_state is not None and last_ac_state == 0 and ac_online == 1:
                     low_battery_warned = False
-                    emit({"system_event": "charger_connected", "message": "⚡ Carregador conectado!"})
+                    emit({"system_event": "charger_connected", "message": "⚡ Charger connected!"})
                 last_ac_state = ac_online
 
             # Check Battery Level & Discharge
@@ -240,7 +240,7 @@ def system_hardware_watcher():
                             emit({
                                 "system_event": "low_battery",
                                 "percentage": cap,
-                                "message": f"⚠️ Bateria fraca ({cap}%)! Conecte o carregador."
+                                "message": f"⚠️ Low battery ({cap}%)! Please plug in charger."
                             })
                     elif cap > 20:
                         low_battery_warned = False

@@ -116,19 +116,19 @@ class TestHerdrIntegration(unittest.TestCase):
                             mock_emit({
                                 "agent_event": "blocked",
                                 "agent": name,
-                                "message": f"⚠️ Agente '{name}' está bloqueado e aguarda sua resposta!"
+                                "message": f"⚠️ Agent '{name}' is blocked and waiting for your response!"
                             })
                         elif status == "done":
                             mock_emit({
                                 "agent_event": "done",
                                 "agent": name,
-                                "message": f"🎉 Agente '{name}' concluiu sua tarefa com sucesso!"
+                                "message": f"🎉 Agent '{name}' completed its task successfully!"
                             })
                         elif status == "working" and prev_status in ("idle", "unknown", "done", "blocked"):
                             mock_emit({
                                 "agent_event": "working",
                                 "agent": name,
-                                "message": f"Agente '{name}' começou a trabalhar..."
+                                "message": f"Agent '{name}' started working..."
                             })
 
                     known_herdr_states[key] = status
@@ -168,7 +168,7 @@ class TestHerdrIntegration(unittest.TestCase):
         process_herdr_payload(step3)
         self.assertEqual(len(emitted_events), 2)
         self.assertEqual(emitted_events[-1]["agent_event"], "blocked")
-        self.assertIn("bloqueado", emitted_events[-1]["message"])
+        self.assertIn("blocked", emitted_events[-1]["message"])
         print("  ✓ Step 3: Transition working -> blocked emitted 'blocked' alert")
 
         # Step 4: User replies, agent resumes working -> Should emit "working"
@@ -193,7 +193,7 @@ class TestHerdrIntegration(unittest.TestCase):
         process_herdr_payload(step5)
         self.assertEqual(len(emitted_events), 4)
         self.assertEqual(emitted_events[-1]["agent_event"], "done")
-        self.assertIn("concluiu", emitted_events[-1]["message"])
+        self.assertIn("completed", emitted_events[-1]["message"])
         print("  ✓ Step 5: Transition working -> done emitted celebration 'done' event")
 
         # Step 6: Multi-agent concurrent transitions
@@ -275,7 +275,7 @@ class TestHerdrIntegration(unittest.TestCase):
         print(f"  ✓ Omaclippy is active in Omarchy Shell (mode: {initial_status.get('mode')}, scale: {initial_status.get('scale')})")
 
         # 1. Trigger 'working' agent reaction -> GetTechy
-        res = subprocess.run(["omarchy-shell", "dorneles.omaclippy", "react", "GetTechy", "Agente 'herdr-worker' trabalhando..."], capture_output=True, text=True)
+        res = subprocess.run(["omarchy-shell", "dorneles.omaclippy", "react", "GetTechy", "Agent 'herdr-worker' working..."], capture_output=True, text=True)
         self.assertEqual(res.returncode, 0)
         st = self._wait_for_anim("GetTechy")
         self.assertEqual(st.get("currentAnim"), "GetTechy")
@@ -283,7 +283,7 @@ class TestHerdrIntegration(unittest.TestCase):
         print("  ✓ 'working' reaction triggered 'GetTechy' with speech bubble")
 
         # 2. Trigger 'blocked' agent reaction -> Alert
-        res = subprocess.run(["omarchy-shell", "dorneles.omaclippy", "react", "Alert", "⚠️ Agente bloqueado aguardando resposta!"], capture_output=True, text=True)
+        res = subprocess.run(["omarchy-shell", "dorneles.omaclippy", "react", "Alert", "⚠️ Agent blocked waiting for response!"], capture_output=True, text=True)
         self.assertEqual(res.returncode, 0)
         st = self._wait_for_anim("Alert")
         self.assertEqual(st.get("currentAnim"), "Alert")
@@ -291,7 +291,7 @@ class TestHerdrIntegration(unittest.TestCase):
         print("  ✓ 'blocked' reaction triggered 'Alert' with warning speech bubble")
 
         # 3. Trigger 'done' agent reaction -> Congratulate
-        res = subprocess.run(["omarchy-shell", "dorneles.omaclippy", "react", "Congratulate", "🎉 Agente concluiu a tarefa!"], capture_output=True, text=True)
+        res = subprocess.run(["omarchy-shell", "dorneles.omaclippy", "react", "Congratulate", "🎉 Agent completed task!"], capture_output=True, text=True)
         self.assertEqual(res.returncode, 0)
         st = self._wait_for_anim("Congratulate")
         self.assertEqual(st.get("currentAnim"), "Congratulate")

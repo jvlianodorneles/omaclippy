@@ -334,7 +334,7 @@ PanelWindow {
     bubbleItem.isPromptMode = false
     var cleanPrompt = String(promptText || "").substring(0, 500)
     root.playAnimation("Thinking")
-    root.speak("Enviando para o agente: " + cleanPrompt, 4000)
+    root.speak("Sending to agent: " + cleanPrompt, 4000)
     Quickshell.execDetached([root.omarchyBin, "agent", "prompt", cleanPrompt])
   }
 
@@ -682,10 +682,10 @@ PanelWindow {
             var sysMsg = String(data.message || "").substring(0, 300)
             if (data.system_event === "low_battery") {
               root.playAnimation("Alert")
-              root.speak(sysMsg || "Bateria baixa!", 6000)
+              root.speak(sysMsg || "Low battery!", 6000)
             } else if (data.system_event === "charger_connected") {
               root.playAnimation("Congratulate")
-              root.speak(sysMsg || "Carregador conectado!", 4000)
+              root.speak(sysMsg || "Charger connected!", 4000)
             } else if (data.system_event === "idle_sleep") {
               root.playAnimation("IdleSnooze")
             } else if (data.system_event === "user_wake") {

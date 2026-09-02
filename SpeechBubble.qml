@@ -19,7 +19,7 @@ Item {
 
   // Interactive AI & Prompt features
   property bool isPromptMode: false
-  property var actionButtons: [] // e.g. [{"label": "Aprovar", "action": "approve"}]
+  property var actionButtons: [] // e.g. [{"label": "Approve", "action": "approve"}]
 
   signal dismissed()
   signal promptSubmitted(string prompt)
@@ -32,7 +32,7 @@ Item {
     id: textMetrics
     font.pixelSize: 12
     font.weight: Font.Medium
-    text: root.isPromptMode ? "Digite sua pergunta para o agente do sistema..." : root.fullText
+    text: root.isPromptMode ? "Ask the system agent a question..." : root.fullText
   }
 
   readonly property real measuredLines: textMetrics.width > 200
@@ -282,7 +282,7 @@ Item {
               maximumLength: 500
 
               Text {
-                text: "Pergunte ao Agente... (Enter para enviar)"
+                text: "Ask the Agent... (Enter to submit)"
                 color: "#94a3b8"
                 font.pixelSize: 11
                 font.italic: true
