@@ -22,6 +22,8 @@ Panel {
   readonly property string stateDir: Quickshell.env("HOME") + "/.local/state/omarchy/omaclippy"
   readonly property string stateFilePath: stateDir + "/config.json"
   readonly property string omarchyShellBin: "/usr/share/omarchy/bin/omarchy-shell"
+  readonly property string pwPlayBin: "/usr/bin/pw-play"
+  readonly property string soundsDir: Qt.resolvedUrl("assets/sounds/").toString().replace("file://", "")
 
   // Live state
   property bool clippyEnabled: true
@@ -31,6 +33,7 @@ Panel {
   property real soundVolume: 0.5
   property string idleFrequency: "normal"
   property bool speechBubbles: true
+  property string balloonSkin: "classic"
   property bool reactToCursor: true
   property bool reactToWindows: true
   property bool reactToAgents: true
@@ -39,6 +42,30 @@ Panel {
 
   property string currentTab: "actions" // "actions" | "settings"
   property bool tipFeedback: false
+
+  // Animation browser state
+  property string animSearchText: ""
+  property string animCategoryFilter: "all" // "all" | "work" | "emotes" | "idles" | "gestures"
+  readonly property var allAnimations: AnimData.getAnimationCatalog()
+
+  function getFilteredAnimations() {
+    var list = root.allAnimations || []
+    var cat = root.animCategoryFilter
+    var q = root.animSearchText.trim().toLowerCase()
+    var out = []
+    for (var i = 0; i < list.length; i++) {
+      var a = list[i]
+      if (cat !== "all" && a.category !== cat) continue
+      if (q.length > 0) {
+        var matchId = a.id.toLowerCase().indexOf(q) !== -1
+        var matchLabel = a.label.toLowerCase().indexOf(q) !== -1
+        var matchDesc = (a.description || "").toLowerCase().indexOf(q) !== -1
+        if (!matchId && !matchLabel && !matchDesc) continue
+      }
+      out.push(a)
+    }
+    return out
+  }
 
   function parseAndValidateConfig(raw) {
     if (!raw || typeof raw !== "string" || raw.length > 16384) return null
@@ -55,6 +82,7 @@ Panel {
       }
       if (["calm", "normal", "frequent"].indexOf(cfg.idleFrequency) !== -1) out.idleFrequency = cfg.idleFrequency
       if (typeof cfg.speechBubbles === "boolean") out.speechBubbles = cfg.speechBubbles
+      if (["classic", "glass", "terminal"].indexOf(cfg.balloonSkin) !== -1) out.balloonSkin = cfg.balloonSkin
       if (typeof cfg.reactToCursor === "boolean") out.reactToCursor = cfg.reactToCursor
       if (typeof cfg.reactToWindows === "boolean") out.reactToWindows = cfg.reactToWindows
       if (typeof cfg.reactToAgents === "boolean") out.reactToAgents = cfg.reactToAgents
@@ -84,6 +112,7 @@ Panel {
         if (cfg.soundVolume !== undefined) root.soundVolume = cfg.soundVolume
         if (cfg.idleFrequency !== undefined) root.idleFrequency = cfg.idleFrequency
         if (cfg.speechBubbles !== undefined) root.speechBubbles = cfg.speechBubbles
+        if (cfg.balloonSkin !== undefined) root.balloonSkin = cfg.balloonSkin
         if (cfg.reactToCursor !== undefined) root.reactToCursor = cfg.reactToCursor
         if (cfg.reactToWindows !== undefined) root.reactToWindows = cfg.reactToWindows
         if (cfg.reactToAgents !== undefined) root.reactToAgents = cfg.reactToAgents
@@ -103,6 +132,7 @@ Panel {
         soundVolume: Number(Math.max(0, Math.min(1, root.soundVolume))),
         idleFrequency: String(root.idleFrequency),
         speechBubbles: Boolean(root.speechBubbles),
+        balloonSkin: String(root.balloonSkin),
         reactToCursor: Boolean(root.reactToCursor),
         reactToWindows: Boolean(root.reactToWindows),
         reactToAgents: Boolean(root.reactToAgents),
@@ -138,6 +168,12 @@ Panel {
     callClippy("tip")
   }
 
+  function testSoundEffect() {
+    if (!root.soundEnabled || root.soundVolume <= 0) return
+    var filePath = root.soundsDir + "Greeting.mp3"
+    Quickshell.execDetached([root.pwPlayBin, "--volume", root.soundVolume.toFixed(2), filePath])
+  }
+
   Timer {
     id: tipTimer
     interval: 800
@@ -151,8 +187,8 @@ Panel {
     owner: root.barIdentity
     bar: root.bar || (hostWidget ? hostWidget.bar : null)
     open: root.opened
-    contentWidth: panel.fittedContentWidth(Style.space(340))
-    contentHeight: panel.fittedContentHeight(Math.min(Style.space(480), containerCol.implicitHeight))
+    contentWidth: panel.fittedContentWidth(Style.space(370))
+    contentHeight: panel.fittedContentHeight(Math.min(Style.space(520), containerCol.implicitHeight))
 
     Column {
       id: containerCol
@@ -247,7 +283,7 @@ Panel {
         Button {
           Layout.fillWidth: true
           Layout.preferredHeight: Style.space(26)
-          text: "🎭 Actions & Speech"
+          text: "🎭 Actions (" + root.allAnimations.length + ")"
           selected: root.currentTab === "actions"
           bordered: true
           onClicked: root.currentTab = "actions"
@@ -269,7 +305,7 @@ Panel {
       Flickable {
         id: scrollArea
         width: parent.width
-        height: Math.min(Style.space(420), tabContent.implicitHeight)
+        height: Math.min(Style.space(460), tabContent.implicitHeight)
         contentWidth: width
         contentHeight: tabContent.implicitHeight
         clip: true
@@ -282,7 +318,7 @@ Panel {
           implicitHeight: root.currentTab === "actions" ? actionsCol.implicitHeight : settingsCol.implicitHeight
 
           // =========================================================
-          // TAB 1: ACTIONS & SPEECH
+          // TAB 1: ACTIONS & FULL ANIMATION BROWSER
           // =========================================================
           Column {
             id: actionsCol
@@ -338,59 +374,181 @@ Panel {
               }
             }
 
-            // Quick Animation Triggers Card
+            // Full Animation Browser Card with Search & Categories
             Rectangle {
               width: parent.width
-              height: animCol.implicitHeight + Style.space(12)
+              height: animBrowserCol.implicitHeight + Style.space(14)
               radius: Style.cornerRadius > 0 ? Style.cornerRadius : 6
               color: Util.alpha(root.foreground, 0.04)
               border.color: Util.alpha(root.foreground, 0.08)
               border.width: 1
 
               ColumnLayout {
-                id: animCol
+                id: animBrowserCol
                 anchors.fill: parent
                 anchors.margins: Style.space(6)
-                spacing: Style.space(4)
+                spacing: Style.space(6)
 
-                Text {
-                  text: "PLAY ANIMATIONS"
-                  color: Util.alpha(root.foreground, 0.7)
-                  font.family: root.fontFamily
-                  font.pixelSize: Style.font.caption
-                  font.bold: true
+                // Header with Count
+                RowLayout {
+                  Layout.fillWidth: true
+
+                  Text {
+                    text: "ANIMATION GALLERY"
+                    color: Util.alpha(root.foreground, 0.7)
+                    font.family: root.fontFamily
+                    font.pixelSize: Style.font.caption
+                    font.bold: true
+                  }
+
+                  Item { Layout.fillWidth: true }
+
+                  Text {
+                    text: root.getFilteredAnimations().length + " of " + root.allAnimations.length
+                    color: Util.alpha(root.foreground, 0.45)
+                    font.family: root.fontFamily
+                    font.pixelSize: Style.font.caption
+                  }
                 }
 
+                // Instant Search Bar
+                Rectangle {
+                  Layout.fillWidth: true
+                  Layout.preferredHeight: Style.space(26)
+                  radius: 4
+                  color: Util.alpha(root.foreground, 0.06)
+                  border.color: searchInput.activeFocus ? Color.accent : Util.alpha(root.foreground, 0.15)
+                  border.width: 1
+
+                  RowLayout {
+                    anchors.fill: parent
+                    anchors.leftMargin: 6
+                    anchors.rightMargin: 6
+                    spacing: Style.space(4)
+
+                    Text {
+                      text: "🔍"
+                      font.pixelSize: 11
+                    }
+
+                    TextInput {
+                      id: searchInput
+                      Layout.fillWidth: true
+                      Layout.fillHeight: true
+                      verticalAlignment: TextInput.AlignVCenter
+                      color: Color.foreground
+                      font.family: root.fontFamily
+                      font.pixelSize: Style.font.caption
+                      clip: true
+                      selectByMouse: true
+                      maximumLength: 40
+
+                      Text {
+                        anchors.fill: parent
+                        verticalAlignment: Text.AlignVCenter
+                        text: "Search animations (e.g. atom, wave, mail)..."
+                        color: Util.alpha(root.foreground, 0.4)
+                        font.family: root.fontFamily
+                        font.pixelSize: Style.font.caption
+                        visible: !searchInput.text && !searchInput.activeFocus
+                      }
+
+                      onTextChanged: {
+                        root.animSearchText = text
+                      }
+                    }
+
+                    Rectangle {
+                      Layout.preferredWidth: 16
+                      Layout.preferredHeight: 16
+                      radius: 8
+                      visible: searchInput.text.length > 0
+                      color: clearMouse.containsMouse ? Util.alpha(root.foreground, 0.15) : "transparent"
+
+                      Text {
+                        anchors.centerIn: parent
+                        text: "✕"
+                        font.pixelSize: 10
+                        color: Util.alpha(root.foreground, 0.6)
+                      }
+
+                      MouseArea {
+                        id: clearMouse
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: {
+                          searchInput.text = ""
+                          root.animSearchText = ""
+                        }
+                      }
+                    }
+                  }
+                }
+
+                // Category Filter Pills
+                RowLayout {
+                  Layout.fillWidth: true
+                  spacing: Style.space(3)
+
+                  Repeater {
+                    model: [
+                      { id: "all", label: "All" },
+                      { id: "work", label: "🛠️ Work" },
+                      { id: "emotes", label: "🎭 Emotes" },
+                      { id: "idles", label: "💤 Idles" },
+                      { id: "gestures", label: "👉 Gestures" }
+                    ]
+
+                    delegate: Button {
+                      required property var modelData
+                      Layout.fillWidth: true
+                      Layout.preferredHeight: Style.space(22)
+                      text: modelData.label
+                      selected: root.animCategoryFilter === modelData.id
+                      bordered: true
+                      onClicked: root.animCategoryFilter = modelData.id
+                    }
+                  }
+                }
+
+                // Animation Buttons Grid
                 GridLayout {
+                  id: animGrid
                   Layout.fillWidth: true
                   columns: 3
                   rowSpacing: Style.space(4)
                   columnSpacing: Style.space(4)
 
                   Repeater {
-                    model: [
-                      { id: "Wave", label: "👋 Wave" },
-                      { id: "Thinking", label: "🤔 Thinking" },
-                      { id: "Explain", label: "💬 Explain" },
-                      { id: "GetWizardy", label: "🧙 Wizard" },
-                      { id: "GetArtsy", label: "🎨 Artsy" },
-                      { id: "GetTechy", label: "💻 Techy" },
-                      { id: "Writing", label: "✍️ Writing" },
-                      { id: "Congratulate", label: "🎉 Celebrate" },
-                      { id: "IdleSnooze", label: "💤 Snooze" }
-                    ]
+                    model: root.getFilteredAnimations()
 
                     delegate: Button {
                       required property var modelData
                       Layout.fillWidth: true
                       Layout.preferredHeight: Style.space(26)
-                      text: modelData.label
+                      text: modelData.label + (modelData.hasSound ? " 🔊" : "")
                       bordered: true
                       enabled: root.clippyEnabled
                       opacity: root.clippyEnabled ? 1.0 : 0.5
+                      tooltipText: modelData.description || modelData.id
                       onClicked: root.callClippy("play", modelData.id)
                     }
                   }
+                }
+
+                // Empty state if no animations match search
+                Text {
+                  Layout.fillWidth: true
+                  Layout.preferredHeight: Style.space(30)
+                  horizontalAlignment: Text.AlignHCenter
+                  verticalAlignment: Text.AlignVCenter
+                  text: "No animations match '" + root.animSearchText + "'"
+                  color: Util.alpha(root.foreground, 0.45)
+                  font.family: root.fontFamily
+                  font.pixelSize: Style.font.caption
+                  font.italic: true
+                  visible: root.getFilteredAnimations().length === 0
                 }
               }
             }
@@ -483,7 +641,7 @@ Panel {
           }
 
           // =========================================================
-          // TAB 2: SETTINGS & BEHAVIORS
+          // TAB 2: SETTINGS, AUDIO & BEHAVIORS
           // =========================================================
           Column {
             id: settingsCol
@@ -579,10 +737,137 @@ Panel {
                     }
                   }
                 }
+
+                // Speech Bubble Skin Selector
+                Text {
+                  text: "SPEECH BUBBLE THEME"
+                  color: Util.alpha(root.foreground, 0.7)
+                  font.family: root.fontFamily
+                  font.pixelSize: Style.font.caption
+                  font.bold: true
+                  Layout.topMargin: Style.space(2)
+                }
+
+                RowLayout {
+                  Layout.fillWidth: true
+                  spacing: Style.space(4)
+
+                  Repeater {
+                    model: [
+                      { id: "classic", label: "Classic Yellow" },
+                      { id: "glass", label: "Omarchy Glass" },
+                      { id: "terminal", label: "Retro Terminal" }
+                    ]
+
+                    delegate: Button {
+                      required property var modelData
+                      Layout.fillWidth: true
+                      Layout.preferredHeight: Style.space(26)
+                      text: modelData.label
+                      selected: root.balloonSkin === modelData.id
+                      bordered: true
+                      onClicked: {
+                        root.balloonSkin = modelData.id
+                        root.saveConfig()
+                        root.callClippy("setSkin", modelData.id)
+                      }
+                    }
+                  }
+                }
               }
             }
 
-            // Behavior & Audio Toggles Card
+            // Audio & Sound Volume Card
+            Rectangle {
+              width: parent.width
+              height: audioCol.implicitHeight + Style.space(12)
+              radius: Style.cornerRadius > 0 ? Style.cornerRadius : 6
+              color: Util.alpha(root.foreground, 0.04)
+              border.color: Util.alpha(root.foreground, 0.08)
+              border.width: 1
+
+              ColumnLayout {
+                id: audioCol
+                anchors.fill: parent
+                anchors.margins: Style.space(6)
+                spacing: Style.space(6)
+
+                Text {
+                  text: "AUDIO & SOUND EFFECTS"
+                  color: Util.alpha(root.foreground, 0.7)
+                  font.family: root.fontFamily
+                  font.pixelSize: Style.font.caption
+                  font.bold: true
+                }
+
+                Toggle {
+                  Layout.fillWidth: true
+                  label: "Sound Effects"
+                  description: "Play classic synchronized sound effects"
+                  checked: root.soundEnabled
+                  onClicked: {
+                    root.soundEnabled = !root.soundEnabled
+                    root.saveConfig()
+                    root.callClippy("setSound", root.soundEnabled ? "1" : "0")
+                  }
+                }
+
+                // Volume Level Control Row
+                RowLayout {
+                  Layout.fillWidth: true
+                  spacing: Style.space(6)
+                  visible: root.soundEnabled
+
+                  Text {
+                    text: "Volume: " + Math.round(root.soundVolume * 100) + "%"
+                    color: Color.foreground
+                    font.family: root.fontFamily
+                    font.pixelSize: Style.font.caption
+                    font.bold: true
+                    Layout.preferredWidth: Style.space(90)
+                  }
+
+                  RowLayout {
+                    Layout.fillWidth: true
+                    spacing: Style.space(3)
+
+                    Repeater {
+                      model: [
+                        { label: "25%", val: 0.25 },
+                        { label: "50%", val: 0.50 },
+                        { label: "75%", val: 0.75 },
+                        { label: "100%", val: 1.00 }
+                      ]
+
+                      delegate: Button {
+                        required property var modelData
+                        Layout.fillWidth: true
+                        Layout.preferredHeight: Style.space(24)
+                        text: modelData.label
+                        selected: Math.abs(root.soundVolume - modelData.val) < 0.05
+                        bordered: true
+                        onClicked: {
+                          root.soundVolume = modelData.val
+                          root.saveConfig()
+                          root.callClippy("setVolume", modelData.val.toFixed(2))
+                        }
+                      }
+                    }
+                  }
+
+                  Button {
+                    Layout.preferredWidth: Style.space(65)
+                    Layout.preferredHeight: Style.space(24)
+                    text: "🔊 Test"
+                    bordered: true
+                    accent: Color.accent
+                    onClicked: root.testSoundEffect()
+                  }
+                }
+              }
+            }
+
+            // Behavior Toggles Card
             Rectangle {
               width: parent.width
               height: behaviorCol.implicitHeight + Style.space(12)
@@ -600,7 +885,7 @@ Panel {
                 spacing: Style.space(4)
 
                 Text {
-                  text: "BEHAVIORS & AUDIO"
+                  text: "BEHAVIORS & REACTIVITY"
                   color: Util.alpha(root.foreground, 0.7)
                   font.family: root.fontFamily
                   font.pixelSize: Style.font.caption
@@ -610,20 +895,8 @@ Panel {
 
                 Toggle {
                   width: behaviorCol.width
-                  label: "Sound Effects"
-                  description: "Play classic sound effects"
-                  checked: root.soundEnabled
-                  onClicked: {
-                    root.soundEnabled = !root.soundEnabled
-                    root.saveConfig()
-                    root.callClippy("setSound", root.soundEnabled ? "1" : "0")
-                  }
-                }
-
-                Toggle {
-                  width: behaviorCol.width
                   label: "Speech Bubbles"
-                  description: "Show retro speech balloons"
+                  description: "Show retro speech balloons with tips"
                   checked: root.speechBubbles
                   onClicked: {
                     root.speechBubbles = !root.speechBubbles

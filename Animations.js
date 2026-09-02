@@ -11178,3 +11178,60 @@ var tips = [
 function getRandomTip() {
   return tips[Math.floor(Math.random() * tips.length)];
 }
+
+var animationCatalog = [
+  // 1. Productivity & Work (8)
+  { id: "Save", label: "💾 Save", category: "work", hasSound: true, description: "Floppy disk save" },
+  { id: "Print", label: "🖨️ Print", category: "work", hasSound: true, description: "Paper print roll" },
+  { id: "SendMail", label: "✈️ Send Mail", category: "work", hasSound: true, description: "Paper airplane mail" },
+  { id: "Writing", label: "✍️ Writing", category: "work", hasSound: true, description: "Pen & notepad writing" },
+  { id: "Searching", label: "🔍 Searching", category: "work", hasSound: false, description: "Magnifying glass search" },
+  { id: "Processing", label: "⚙️ Processing", category: "work", hasSound: true, description: "Rotating gear cogs" },
+  { id: "EmptyTrash", label: "🗑️ Empty Trash", category: "work", hasSound: true, description: "Trash can recycle" },
+  { id: "CheckingSomething", label: "📋 Checking", category: "work", hasSound: false, description: "Inspects checklist" },
+
+  // 2. Reactions & Emotes (12)
+  { id: "Wave", label: "👋 Wave", category: "emotes", hasSound: false, description: "Friendly hand wave" },
+  { id: "Greeting", label: "🤝 Greeting", category: "emotes", hasSound: true, description: "Warm bow & greeting" },
+  { id: "GoodBye", label: "🙋 GoodBye", category: "emotes", hasSound: false, description: "Farewell wave & leave" },
+  { id: "Congratulate", label: "🎉 Celebrate", category: "emotes", hasSound: true, description: "Party confetti blast" },
+  { id: "Thinking", label: "🤔 Thinking", category: "emotes", hasSound: false, description: "Pensive contemplation" },
+  { id: "Explain", label: "💬 Explain", category: "emotes", hasSound: false, description: "Speaking & gestures" },
+  { id: "Alert", label: "⚠️ Alert", category: "emotes", hasSound: true, description: "Red triangle exclamation" },
+  { id: "GetAttention", label: "📢 Attention", category: "emotes", hasSound: true, description: "Megaphone shout" },
+  { id: "Hearing_1", label: "👂 Listen", category: "emotes", hasSound: false, description: "Cups hand to ear" },
+  { id: "GetWizardy", label: "🧙 Wizard", category: "emotes", hasSound: true, description: "Magic wand & sparkles" },
+  { id: "GetTechy", label: "💻 Techy", category: "emotes", hasSound: true, description: "Tech transformation" },
+  { id: "GetArtsy", label: "🎨 Artsy", category: "emotes", hasSound: true, description: "Painter artist palette" },
+
+  // 3. Idles & Transformations (11)
+  { id: "IdleSnooze", label: "💤 Snooze", category: "idles", hasSound: false, description: "Deep sleep & snoring" },
+  { id: "IdleAtom", label: "⚛️ Atom", category: "idles", hasSound: false, description: "3 rotating orbital rings" },
+  { id: "IdleRopePile", label: "🪢 Rope Mobile", category: "idles", hasSound: false, description: "Unravels into wires" },
+  { id: "IdleFingerTap", label: "👆 Finger Tap", category: "idles", hasSound: false, description: "Impatient floor tap" },
+  { id: "IdleHeadScratch", label: "🤔 Scratch", category: "idles", hasSound: false, description: "Scratches top of head" },
+  { id: "IdleEyeBrowRaise", label: "🤨 Eyebrow", category: "idles", hasSound: false, description: "Raises curious eyebrow" },
+  { id: "IdleSideToSide", label: "↔️ Sway", category: "idles", hasSound: false, description: "Gentle side-to-side sway" },
+  { id: "Idle1_1", label: "🫁 Breathe", category: "idles", hasSound: false, description: "Natural blinking idle" },
+  { id: "RestPose", label: "📎 Rest Pose", category: "idles", hasSound: false, description: "Classic neutral rest" },
+  { id: "Hide", label: "🙈 Hide", category: "idles", hasSound: false, description: "Collapses and hides" },
+  { id: "Show", label: "👁️ Show", category: "idles", hasSound: false, description: "Reappears on screen" },
+
+  // 4. Gestures & Directional Looks (12)
+  { id: "GestureUp", label: "⬆️ Point Up", category: "gestures", hasSound: false, description: "Points arm upward" },
+  { id: "GestureDown", label: "⬇️ Point Down", category: "gestures", hasSound: false, description: "Points arm downward" },
+  { id: "GestureLeft", label: "⬅️ Point Left", category: "gestures", hasSound: false, description: "Points arm leftward" },
+  { id: "GestureRight", label: "➡️ Point Right", category: "gestures", hasSound: false, description: "Points arm rightward" },
+  { id: "LookUp", label: "👀 Look Up", category: "gestures", hasSound: false, description: "Glances top" },
+  { id: "LookDown", label: "👀 Look Down", category: "gestures", hasSound: false, description: "Glances bottom" },
+  { id: "LookLeft", label: "👀 Look Left", category: "gestures", hasSound: false, description: "Glances left" },
+  { id: "LookRight", label: "👀 Look Right", category: "gestures", hasSound: false, description: "Glances right" },
+  { id: "LookUpLeft", label: "↖️ Look Up-L", category: "gestures", hasSound: false, description: "Glances top-left" },
+  { id: "LookUpRight", label: "↗️ Look Up-R", category: "gestures", hasSound: false, description: "Glances top-right" },
+  { id: "LookDownLeft", label: "↙️ Look Down-L", category: "gestures", hasSound: false, description: "Glances bottom-left" },
+  { id: "LookDownRight", label: "↘️ Look Down-R", category: "gestures", hasSound: false, description: "Glances bottom-right" }
+];
+
+function getAnimationCatalog() {
+  return animationCatalog;
+}

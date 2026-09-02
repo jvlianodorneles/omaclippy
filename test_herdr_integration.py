@@ -491,8 +491,10 @@ class TestHerdrIntegration(unittest.TestCase):
                     out["soundEnabled"] = cfg["soundEnabled"]
                 if isinstance(cfg.get("soundVolume"), (int, float)):
                     out["soundVolume"] = max(0.0, min(1.0, float(cfg["soundVolume"])))
-                if cfg.get("idleFrequency") in ["calm", "normal", "frequent"]:
-                    out["idleFrequency"] = cfg["idleFrequency"]
+                if isinstance(cfg.get("speechBubbles"), bool):
+                    out["speechBubbles"] = cfg["speechBubbles"]
+                if cfg.get("balloonSkin") in ["classic", "glass", "terminal"]:
+                    out["balloonSkin"] = cfg["balloonSkin"]
                 if isinstance(cfg.get("rawInputTracking"), bool):
                     out["rawInputTracking"] = cfg["rawInputTracking"]
                 return out
@@ -500,13 +502,18 @@ class TestHerdrIntegration(unittest.TestCase):
                 return None
 
         # Valid payload
-        valid = validate_config(json.dumps({"enabled": True, "mode": "roam", "soundVolume": 0.8}))
+        valid = validate_config(json.dumps({"enabled": True, "mode": "roam", "soundVolume": 0.8, "balloonSkin": "glass"}))
         self.assertEqual(valid["mode"], "roam")
         self.assertEqual(valid["soundVolume"], 0.8)
+        self.assertEqual(valid["balloonSkin"], "glass")
 
         # Invalid mode rejected
         invalid_mode = validate_config(json.dumps({"mode": "invalid_mode_attack"}))
         self.assertNotIn("mode", invalid_mode)
+
+        # Invalid balloonSkin rejected
+        invalid_skin = validate_config(json.dumps({"balloonSkin": "malicious_skin"}))
+        self.assertNotIn("balloonSkin", invalid_skin)
 
         # Out-of-bounds volume clamped
         clamped_vol = validate_config(json.dumps({"soundVolume": 999.0}))

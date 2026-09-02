@@ -41,6 +41,7 @@
       "soundVolume": 0.5,
       "idleFrequency": "normal",
       "speechBubbles": true,
+      "balloonSkin": "classic",
       "reactToCursor": true,
       "reactToWindows": true,
       "rawInputTracking": false
@@ -91,6 +92,18 @@
         "label": "Speech Bubbles",
         "defaultValue": true,
         "description": "Show retro speech balloons with tips and messages."
+      },
+      {
+        "key": "balloonSkin",
+        "type": "enum",
+        "label": "Speech Bubble Skin",
+        "options": [
+          "classic",
+          "glass",
+          "terminal"
+        ],
+        "defaultValue": "classic",
+        "description": "Visual skin style for speech balloons: Classic 1997 Yellow, Omarchy Acrylic Glass, or Retro Terminal."
       },
       {
         "key": "reactToCursor",

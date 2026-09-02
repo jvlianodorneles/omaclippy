@@ -49,6 +49,7 @@ PanelWindow {
   property real soundVolume: 0.5
   property string idleFrequency: "normal" // "calm" | "normal" | "frequent"
   property bool speechBubbles: true
+  property string balloonSkin: "classic" // "classic" | "glass" | "terminal"
   property bool reactToCursor: true
   property bool reactToWindows: true
   property bool reactToAgents: true
@@ -397,6 +398,7 @@ PanelWindow {
       }
       if (["calm", "normal", "frequent"].indexOf(cfg.idleFrequency) !== -1) out.idleFrequency = cfg.idleFrequency
       if (typeof cfg.speechBubbles === "boolean") out.speechBubbles = cfg.speechBubbles
+      if (["classic", "glass", "terminal"].indexOf(cfg.balloonSkin) !== -1) out.balloonSkin = cfg.balloonSkin
       if (typeof cfg.reactToCursor === "boolean") out.reactToCursor = cfg.reactToCursor
       if (typeof cfg.reactToWindows === "boolean") out.reactToWindows = cfg.reactToWindows
       if (typeof cfg.reactToAgents === "boolean") out.reactToAgents = cfg.reactToAgents
@@ -428,6 +430,7 @@ PanelWindow {
         if (cfg.soundVolume !== undefined) root.soundVolume = cfg.soundVolume
         if (cfg.idleFrequency !== undefined) root.idleFrequency = cfg.idleFrequency
         if (cfg.speechBubbles !== undefined) root.speechBubbles = cfg.speechBubbles
+        if (cfg.balloonSkin !== undefined) root.balloonSkin = cfg.balloonSkin
         if (cfg.reactToCursor !== undefined) root.reactToCursor = cfg.reactToCursor
         if (cfg.reactToWindows !== undefined) root.reactToWindows = cfg.reactToWindows
         if (cfg.reactToAgents !== undefined) root.reactToAgents = cfg.reactToAgents
@@ -449,6 +452,7 @@ PanelWindow {
         soundVolume: Number(Math.max(0, Math.min(1, root.soundVolume))),
         idleFrequency: String(root.idleFrequency),
         speechBubbles: Boolean(root.speechBubbles),
+        balloonSkin: String(root.balloonSkin),
         reactToCursor: Boolean(root.reactToCursor),
         reactToWindows: Boolean(root.reactToWindows),
         reactToAgents: Boolean(root.reactToAgents),
@@ -820,6 +824,15 @@ PanelWindow {
       return "invalid volume"
     }
 
+    function setSkin(val: string): string {
+      if (["classic", "glass", "terminal"].indexOf(val) !== -1) {
+        root.balloonSkin = val
+        root.saveConfig()
+        return "ok"
+      }
+      return "invalid skin"
+    }
+
     function setRawInput(val: string): string {
       root.rawInputTracking = (val === "true" || val === "1" || val === "on")
       root.saveConfig()
@@ -871,6 +884,7 @@ PanelWindow {
     SpeechBubble {
       id: bubbleItem
       clippyScale: root.scaleFactor
+      skin: root.balloonSkin
       fullText: root.speechFullText
       displayedText: root.speechDisplayedText
       active: root.speechVisible

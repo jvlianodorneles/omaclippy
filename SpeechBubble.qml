@@ -3,6 +3,7 @@ import QtQuick.Layouts
 import QtQuick.Shapes
 import QtQuick.Effects
 import qs.Commons
+import qs.Ui
 
 Item {
   id: root
@@ -16,6 +17,7 @@ Item {
   property real clippyScale: 1.0
   property bool placeBelow: false
   property bool placeLeft: false
+  property string skin: "classic" // "classic" | "glass" | "terminal"
 
   // Interactive AI & Prompt features
   property bool isPromptMode: false
@@ -24,6 +26,41 @@ Item {
   signal dismissed()
   signal promptSubmitted(string prompt)
   signal actionTriggered(string action, string label)
+
+  // -------------------------------------------------------------
+  // Skin Styling Palettes
+  // -------------------------------------------------------------
+  readonly property color bubbleBgColor: skin === "glass"
+    ? Util.alpha(Color.popups.background || Color.background, 0.92)
+    : (skin === "terminal" ? "#0a0e14" : "#fef9c3")
+
+  readonly property color bubbleBorderColor: skin === "glass"
+    ? Util.alpha(Color.foreground, 0.22)
+    : (skin === "terminal" ? "#10b981" : "#ca8a04")
+
+  readonly property color bubbleTextColor: skin === "glass"
+    ? (Color.popups.text || Color.foreground)
+    : (skin === "terminal" ? "#34d399" : "#1e293b")
+
+  readonly property color bubbleCloseColor: skin === "glass"
+    ? Util.alpha(Color.foreground, 0.6)
+    : (skin === "terminal" ? "#10b981" : "#854d0e")
+
+  readonly property color bubbleCloseHoverBg: skin === "glass"
+    ? Util.alpha(Color.foreground, 0.12)
+    : (skin === "terminal" ? Util.alpha("#10b981", 0.2) : "#fde047")
+
+  readonly property color promptBgColor: skin === "glass"
+    ? Util.alpha(Color.background, 0.6)
+    : (skin === "terminal" ? "#030712" : "#ffffff")
+
+  readonly property color promptBorderColor: skin === "glass"
+    ? Color.accent
+    : (skin === "terminal" ? "#059669" : "#d97706")
+
+  readonly property color promptTextColor: skin === "glass"
+    ? Color.foreground
+    : (skin === "terminal" ? "#6ee7b7" : "#1e293b")
 
   // -------------------------------------------------------------
   // Instant C++ Text Metrics (Guaranteed non-zero, no scene lag)
@@ -130,7 +167,7 @@ Item {
     anchors.bottomMargin: root.placeBelow ? 2 : -2
     anchors.leftMargin: 1
     anchors.rightMargin: -1
-    opacity: 0.16
+    opacity: root.skin === "terminal" ? 0.35 : (root.skin === "glass" ? 0.25 : 0.16)
     z: -1
 
     readonly property real r: 8
@@ -196,8 +233,8 @@ Item {
     // Main Bubble Vector Outline & Fill
     ShapePath {
       strokeWidth: 1.5
-      strokeColor: "#ca8a04" // Golden amber border
-      fillColor: "#fef9c3"   // Nostalgic warm yellow
+      strokeColor: root.bubbleBorderColor
+      fillColor: root.bubbleBgColor
       joinStyle: ShapePath.RoundJoin
       capStyle: ShapePath.RoundCap
 
@@ -256,8 +293,8 @@ Item {
           Layout.fillWidth: true
           Layout.fillHeight: true
           radius: 6
-          color: "#ffffff"
-          border.color: "#d97706"
+          color: root.promptBgColor
+          border.color: root.promptBorderColor
           border.width: 1
 
           RowLayout {
@@ -273,7 +310,7 @@ Item {
               Layout.fillWidth: true
               Layout.fillHeight: true
               verticalAlignment: Text.AlignVCenter
-              color: "#1e293b"
+              color: root.promptTextColor
               font.pixelSize: 11
               font.weight: Font.Medium
               clip: true
@@ -283,7 +320,7 @@ Item {
 
               Text {
                 text: "Ask the Agent... (Enter to submit)"
-                color: "#94a3b8"
+                color: Util.alpha(root.promptTextColor, 0.5)
                 font.pixelSize: 11
                 font.italic: true
                 visible: !promptInput.text && !promptInput.activeFocus
@@ -310,7 +347,7 @@ Item {
           visible: !root.isPromptMode
           text: root.displayedText
           textFormat: Text.PlainText
-          color: "#1e293b"
+          color: root.bubbleTextColor
           font.pixelSize: 12
           font.weight: Font.Medium
           wrapMode: Text.WordWrap
@@ -326,12 +363,12 @@ Item {
           Layout.preferredHeight: 18
           Layout.alignment: Qt.AlignTop | Qt.AlignRight
           radius: 9
-          color: closeMouse.containsMouse ? "#fde047" : "transparent"
+          color: closeMouse.containsMouse ? root.bubbleCloseHoverBg : "transparent"
 
           Text {
             anchors.centerIn: parent
             text: "✕"
-            color: "#854d0e"
+            color: root.bubbleCloseColor
             font.pixelSize: 10
             font.bold: true
           }
@@ -358,19 +395,20 @@ Item {
 
           Rectangle {
             required property var modelData
+            required property int index
             Layout.fillWidth: true
-            Layout.preferredHeight: 22
-            radius: 5
-            color: btnMouse.containsMouse ? (modelData.color ? Qt.darker(modelData.color, 1.1) : "#fde047") : (modelData.color || "#fef08a")
-            border.color: modelData.borderColor || "#ca8a04"
+            Layout.fillHeight: true
+            radius: 4
+            color: btnMouse.pressed ? Util.alpha(Color.accent, 0.3) : (btnMouse.containsMouse ? Util.alpha(Color.accent, 0.18) : Util.alpha(root.bubbleTextColor, 0.08))
+            border.color: Util.alpha(Color.accent, 0.4)
             border.width: 1
 
             Text {
               anchors.centerIn: parent
-              text: modelData.label || ""
-              color: modelData.textColor || "#854d0e"
+              text: parent.modelData.label || ""
+              color: root.bubbleTextColor
               font.pixelSize: 11
-              font.bold: true
+              font.weight: Font.Bold
             }
 
             MouseArea {
@@ -379,12 +417,12 @@ Item {
               hoverEnabled: true
               cursorShape: Qt.PointingHandCursor
               onClicked: {
-                root.actionTriggered(modelData.action || "", modelData.label || "")
+                root.actionTriggered(parent.modelData.action || "", parent.modelData.label || "")
                 root.hide()
               }
             }
           }
         }
       }
-    }
   }
+}
