@@ -20,6 +20,12 @@ BarWidget {
   property string clippyMode: "companion"
   property string clippyScale: "normal"
 
+  function plain(str, maxLen) {
+    if (!str) return ""
+    var s = String(str).replace(/[<>&]/g, "").replace(/[\x00-\x1f\x7f-\x9f]/g, "")
+    return s.substring(0, maxLen || 300)
+  }
+
   // Panel lifecycle forwarding (Omarchy popout coordinator contract)
   readonly property bool opened: panelLoader.item ? panelLoader.item.opened === true : false
   readonly property bool popoutSwitchClosing: panelLoader.item ? panelLoader.item.popoutSwitchClosing === true : false
@@ -116,9 +122,9 @@ BarWidget {
     active: root.opened
     dimmed: !root.clippyEnabled
 
-    tooltipText: root.clippyEnabled
+    tooltipText: root.plain(root.clippyEnabled
       ? "Clippy Companion — Active (" + root.clippyMode + ")\n• Click: Open Control Panel\n• Right-click: Turn Off\n• Middle-click: Play Animation"
-      : "Clippy Companion — Paused\n• Click: Open Control Panel\n• Right-click: Turn On"
+      : "Clippy Companion — Paused\n• Click: Open Control Panel\n• Right-click: Turn On")
 
     onPressed: function(btnCode) {
       if (btnCode === Qt.RightButton) {

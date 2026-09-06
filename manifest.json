@@ -44,6 +44,8 @@
       "balloonSkin": "classic",
       "reactToCursor": true,
       "reactToWindows": true,
+      "reactToAgents": true,
+      "reactToSystem": true,
       "rawInputTracking": false
     },
     "schema": [
@@ -118,6 +120,20 @@
         "label": "React to Windows",
         "defaultValue": true,
         "description": "Clippy reacts to moving windows via Hyprland sockets."
+      },
+      {
+        "key": "reactToAgents",
+        "type": "boolean",
+        "label": "React to AI Agents",
+        "defaultValue": true,
+        "description": "Clippy reacts when autonomous AI agents (Herdr) work, complete tasks, or get blocked."
+      },
+      {
+        "key": "reactToSystem",
+        "type": "boolean",
+        "label": "React to Hardware & Sleep",
+        "defaultValue": true,
+        "description": "Clippy reacts to low battery, charger connection, and user inactivity/sleep cycles."
       },
       {
         "key": "rawInputTracking",

@@ -39,6 +39,14 @@ Panel {
   property bool reactToAgents: true
   property bool reactToSystem: true
   property bool rawInputTracking: false
+  property int lastPosX: 350
+  property int lastPosY: 350
+
+  function plain(str, maxLen) {
+    if (!str) return ""
+    var s = String(str).replace(/[<>&]/g, "").replace(/[\x00-\x1f\x7f-\x9f]/g, "")
+    return s.substring(0, maxLen || 200)
+  }
 
   property string currentTab: "actions" // "actions" | "settings"
   property bool tipFeedback: false
@@ -92,6 +100,8 @@ Panel {
       if (typeof cfg.reactToAgents === "boolean") out.reactToAgents = cfg.reactToAgents
       if (typeof cfg.reactToSystem === "boolean") out.reactToSystem = cfg.reactToSystem
       if (typeof cfg.rawInputTracking === "boolean") out.rawInputTracking = cfg.rawInputTracking
+      if (typeof cfg.posX === "number" && isFinite(cfg.posX)) out.posX = Math.max(0, Math.min(32767, Math.round(cfg.posX)))
+      if (typeof cfg.posY === "number" && isFinite(cfg.posY)) out.posY = Math.max(0, Math.min(32767, Math.round(cfg.posY)))
       return out
     } catch (e) {
       return null
@@ -122,6 +132,8 @@ Panel {
         if (cfg.reactToAgents !== undefined) root.reactToAgents = cfg.reactToAgents
         if (cfg.reactToSystem !== undefined) root.reactToSystem = cfg.reactToSystem
         if (cfg.rawInputTracking !== undefined) root.rawInputTracking = cfg.rawInputTracking
+        if (cfg.posX !== undefined) root.lastPosX = cfg.posX
+        if (cfg.posY !== undefined) root.lastPosY = cfg.posY
       }
     }
   }
@@ -141,7 +153,9 @@ Panel {
         reactToWindows: Boolean(root.reactToWindows),
         reactToAgents: Boolean(root.reactToAgents),
         reactToSystem: Boolean(root.reactToSystem),
-        rawInputTracking: Boolean(root.rawInputTracking)
+        rawInputTracking: Boolean(root.rawInputTracking),
+        posX: Math.round(root.lastPosX),
+        posY: Math.round(root.lastPosY)
       }
       configFile.setText(JSON.stringify(cfg, null, 2) + "\n")
     } catch (e) {}
@@ -174,7 +188,7 @@ Panel {
 
   function testSoundEffect() {
     if (!root.soundEnabled || root.soundVolume <= 0) return
-    var filePath = root.soundsDir + "Greeting.mp3"
+    var filePath = root.soundsDir + "1.mp3"
     Quickshell.execDetached([root.pwPlayBin, "--volume", root.soundVolume.toFixed(2), filePath])
   }
 
@@ -218,6 +232,7 @@ Panel {
 
           Text {
             text: "\uf0c6"
+            textFormat: Text.PlainText
             color: Color.accent
             font.family: root.fontFamily
             font.pixelSize: Style.font.icon
@@ -227,6 +242,7 @@ Panel {
 
           Text {
             text: "CLIPPY COMPANION"
+            textFormat: Text.PlainText
             color: Color.accent
             font.family: root.fontFamily
             font.pixelSize: Style.font.body
@@ -249,6 +265,7 @@ Panel {
               id: statusText
               anchors.centerIn: parent
               text: root.clippyEnabled ? "ACTIVE" : "PAUSED"
+              textFormat: Text.PlainText
               color: root.clippyEnabled ? Color.accent : Util.alpha(root.foreground, 0.6)
               font.family: root.fontFamily
               font.pixelSize: Style.font.caption
@@ -268,6 +285,7 @@ Panel {
             Text {
               anchors.centerIn: parent
               text: "✕"
+              textFormat: Text.PlainText
               color: Color.popups.text
               font.pixelSize: 11
             }
@@ -410,6 +428,7 @@ Panel {
 
                   Text {
                     text: "ANIMATIONS (" + root.getFilteredAnimations().length + ")"
+                    textFormat: Text.PlainText
                     color: Util.alpha(root.foreground, 0.7)
                     font.family: root.fontFamily
                     font.pixelSize: Style.font.caption
@@ -420,6 +439,7 @@ Panel {
 
                   Text {
                     text: root.animCategoryFilter.toUpperCase()
+                    textFormat: Text.PlainText
                     color: Util.alpha(root.foreground, 0.45)
                     font.family: root.fontFamily
                     font.pixelSize: Style.font.caption
@@ -444,6 +464,7 @@ Panel {
 
                     Text {
                       text: "🔍"
+                      textFormat: Text.PlainText
                       font.pixelSize: 11
                     }
 
@@ -463,6 +484,7 @@ Panel {
                         anchors.fill: parent
                         verticalAlignment: Text.AlignVCenter
                         text: "Search animations..."
+                        textFormat: Text.PlainText
                         color: Util.alpha(root.foreground, 0.4)
                         font.family: root.fontFamily
                         font.pixelSize: Style.font.caption
@@ -484,6 +506,7 @@ Panel {
                       Text {
                         anchors.centerIn: parent
                         text: "✕"
+                        textFormat: Text.PlainText
                         font.pixelSize: 10
                         color: Util.alpha(root.foreground, 0.6)
                       }
@@ -550,7 +573,7 @@ Panel {
                       bordered: true
                       enabled: root.clippyEnabled
                       opacity: root.clippyEnabled ? 1.0 : 0.5
-                      tooltipText: modelData.description || modelData.id
+                      tooltipText: root.plain(modelData.description || modelData.id, 80)
                       onClicked: root.callClippy("play", modelData.id)
                     }
                   }
@@ -563,6 +586,7 @@ Panel {
                   horizontalAlignment: Text.AlignHCenter
                   verticalAlignment: Text.AlignVCenter
                   text: "No animations match '" + root.animSearchText + "'"
+                  textFormat: Text.PlainText
                   color: Util.alpha(root.foreground, 0.45)
                   font.family: root.fontFamily
                   font.pixelSize: Style.font.caption
@@ -589,6 +613,7 @@ Panel {
 
                 Text {
                   text: "SAY SOMETHING"
+                  textFormat: Text.PlainText
                   color: Util.alpha(root.foreground, 0.7)
                   font.family: root.fontFamily
                   font.pixelSize: Style.font.caption
@@ -624,6 +649,7 @@ Panel {
                         anchors.fill: parent
                         verticalAlignment: Text.AlignVCenter
                         text: "Type a message..."
+                        textFormat: Text.PlainText
                         color: Util.alpha(root.foreground, 0.4)
                         font.family: root.fontFamily
                         font.pixelSize: Style.font.caption
@@ -687,6 +713,7 @@ Panel {
                 // Mode
                 Text {
                   text: "COMPANION MODE"
+                  textFormat: Text.PlainText
                   color: Util.alpha(root.foreground, 0.7)
                   font.family: root.fontFamily
                   font.pixelSize: Style.font.caption
@@ -725,6 +752,7 @@ Panel {
                 // Size
                 Text {
                   text: "CLIPPY SIZE"
+                  textFormat: Text.PlainText
                   color: Util.alpha(root.foreground, 0.7)
                   font.family: root.fontFamily
                   font.pixelSize: Style.font.caption
@@ -765,6 +793,7 @@ Panel {
                 // Speech Bubble Skin Selector
                 Text {
                   text: "SPEECH BUBBLE THEME"
+                  textFormat: Text.PlainText
                   color: Util.alpha(root.foreground, 0.7)
                   font.family: root.fontFamily
                   font.pixelSize: Style.font.caption
@@ -820,6 +849,7 @@ Panel {
 
                 Text {
                   text: "AUDIO & SOUND EFFECTS"
+                  textFormat: Text.PlainText
                   color: Util.alpha(root.foreground, 0.7)
                   font.family: root.fontFamily
                   font.pixelSize: Style.font.caption
@@ -846,6 +876,7 @@ Panel {
 
                   Text {
                     text: "Volume: " + Math.round(root.soundVolume * 100) + "%"
+                    textFormat: Text.PlainText
                     color: Color.foreground
                     font.family: root.fontFamily
                     font.pixelSize: Style.font.caption
@@ -916,6 +947,7 @@ Panel {
 
                 Text {
                   text: "BEHAVIORS & REACTIVITY"
+                  textFormat: Text.PlainText
                   color: Util.alpha(root.foreground, 0.7)
                   font.family: root.fontFamily
                   font.pixelSize: Style.font.caption

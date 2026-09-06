@@ -59,8 +59,8 @@ PanelWindow {
   // State Persistence & Trusted Path Bounds
   readonly property string stateDir: Quickshell.env("HOME") + "/.local/state/omarchy/omaclippy"
   readonly property string stateFilePath: stateDir + "/config.json"
-  readonly property string dirFs: Qt.resolvedUrl(".").toString().replace("file://", "")
-  readonly property string soundsDir: Qt.resolvedUrl("assets/sounds/").toString().replace("file://", "")
+  readonly property string dirFs: decodeURIComponent(Qt.resolvedUrl(".").toString().replace(/^file:\/\//, ""))
+  readonly property string soundsDir: decodeURIComponent(Qt.resolvedUrl("assets/sounds/").toString().replace(/^file:\/\//, ""))
 
   // Trusted Absolute Binaries
   readonly property string pythonBin: "/usr/bin/python3"
@@ -380,7 +380,7 @@ PanelWindow {
   // -------------------------------------------------------------
   Process {
     id: ensureStateDirProc
-    command: ["bash", "-c", "mkdir -p -m 0700 \"$1\" && if [[ -L \"$2\" ]]; then rm -f \"$2\"; fi && if [[ -f \"$2\" ]]; then chmod 0600 \"$2\"; fi", "--", root.stateDir, root.stateFilePath]
+    command: [root.pythonBin, "-c", "import os, sys; os.makedirs(sys.argv[1], mode=0o700, exist_ok=True); f=sys.argv[2]; (os.unlink(f) if os.path.islink(f) else (os.chmod(f, 0o600) if os.path.isfile(f) else None))", root.stateDir, root.stateFilePath]
   }
 
   function parseAndValidateConfig(raw) {
@@ -748,21 +748,33 @@ PanelWindow {
       return "playing " + clean
     }
 
-    function react(animName: string, msg: string): string {
+    function doReact(animName, msg, durationMs) {
       var cleanAnim = String(animName || "Explain").trim().substring(0, 40)
       var cleanMsg = String(msg || "").substring(0, 500)
       root.playAnimation(cleanAnim || "Explain")
+      root.currentActionButtons = []
       if (cleanMsg.trim().length > 0) {
+        var parsedDur = parseInt(durationMs)
+        var autoDuration = (isFinite(parsedDur) && parsedDur >= 500)
+          ? Math.min(30000, parsedDur)
+          : Math.min(30000, Math.max(500, cleanMsg.length * 90))
         root.speechFullText = cleanMsg
         root.speechDisplayedText = ""
         root.speechVisible = true
         root.speechTypewriterIdx = 0
         typewriterTimer.restart()
-        var autoDuration = Math.min(30000, Math.max(500, cleanMsg.length * 90))
         autoCloseSpeechTimer.interval = autoDuration
         autoCloseSpeechTimer.restart()
       }
       return "reacting"
+    }
+
+    function react(animName: string, msg: string): string {
+      return doReact(animName, msg, 0)
+    }
+
+    function reactWithDuration(animName: string, msg: string, durationMs: string): string {
+      return doReact(animName, msg, durationMs)
     }
 
     function speak(msg: string): string {
@@ -833,6 +845,30 @@ PanelWindow {
       return "invalid skin"
     }
 
+    function setAgents(val: string): string {
+      root.reactToAgents = (val === "true" || val === "1" || val === "on")
+      root.saveConfig()
+      return "ok"
+    }
+
+    function setSystem(val: string): string {
+      root.reactToSystem = (val === "true" || val === "1" || val === "on")
+      root.saveConfig()
+      return "ok"
+    }
+
+    function setCursor(val: string): string {
+      root.reactToCursor = (val === "true" || val === "1" || val === "on")
+      root.saveConfig()
+      return "ok"
+    }
+
+    function setWindows(val: string): string {
+      root.reactToWindows = (val === "true" || val === "1" || val === "on")
+      root.saveConfig()
+      return "ok"
+    }
+
     function setRawInput(val: string): string {
       root.rawInputTracking = (val === "true" || val === "1" || val === "on")
       root.saveConfig()
@@ -858,6 +894,11 @@ PanelWindow {
         soundEnabled: root.soundEnabled,
         soundVolume: root.soundVolume,
         rawInputTracking: root.rawInputTracking,
+        balloonSkin: root.balloonSkin,
+        reactToCursor: root.reactToCursor,
+        reactToWindows: root.reactToWindows,
+        reactToAgents: root.reactToAgents,
+        reactToSystem: root.reactToSystem,
         currentAnim: root.currentAnim,
         currentFrameIdx: root.currentFrameIdx,
         frameCoords: [root.currentFrameX, root.currentFrameY],

@@ -169,9 +169,12 @@ def handle_call_tool(name, arguments):
     if name == "clippy_react":
         anim = sanitize_anim(arguments.get("animation", "Explain"))
         msg = sanitize_str(arguments.get("message"))
-        
-        # Atomic react invocation
-        run_omarchy_cmd("react", anim, msg)
+        dur = clamp_duration(arguments.get("duration_ms", 5000))
+
+        # Atomic react invocation with duration (fallback to react if runtime not reloaded)
+        out = run_omarchy_cmd("reactWithDuration", anim, msg, str(dur))
+        if out.startswith("error:") or "Unknown" in out or "Too many" in out or "Function definition" in out:
+            run_omarchy_cmd("react", anim, msg)
         if msg:
             return {"content": [{"type": "text", "text": f"Clippy is now playing '{anim}' and saying: \"{msg}\""}]}
         return {"content": [{"type": "text", "text": f"Clippy is now playing '{anim}'"}]}

@@ -103,7 +103,12 @@ case "$cmd" in
   react)
     anim="${1:-Explain}"
     msg=$(truncate_str "${2:-}")
-    exec "$OMARCHY_SHELL" dorneles.omaclippy react "$anim" "$msg"
+    dur="${3:-}"
+    if [[ -n "$dur" ]]; then
+      exec "$OMARCHY_SHELL" dorneles.omaclippy reactWithDuration "$anim" "$msg" "$dur"
+    else
+      exec "$OMARCHY_SHELL" dorneles.omaclippy react "$anim" "$msg"
+    fi
     ;;
   prompt)
     exec "$OMARCHY_SHELL" dorneles.omaclippy prompt

@@ -4,6 +4,8 @@
 #
 # Reacts when long-running terminal commands (> 8s) start, complete, or fail!
 
+zmodload -F zsh/datetime +p:EPOCHSECONDS 2>/dev/null || true
+
 _omaclippy_cmd_start_time=0
 _omaclippy_last_cmd=""
 

@@ -74,20 +74,22 @@ omarchy bar move dorneles.omaclippy --section right
 
 If you ever wish to remove Omaclippy:
 
-### 1. Remove from Status Bar:
+### 1. Remove the plugin:
+
+```bash
+omarchy plugin remove dorneles.omaclippy
+```
+
+### 2. Remove from Status Bar (if customized):
 
 ```bash
 omarchy bar remove dorneles.omaclippy
 ```
 *(Or remove `"dorneles.omaclippy"` from `bar.layout` in `~/.config/omarchy/shell.json`)*
 
-### 2. Delete the plugin directory:
-
-```bash
-rm -rf ~/.config/omarchy/plugins/dorneles.omaclippy
-```
-
 ### 3. Clean up saved state & configuration (Optional):
+
+Omaclippy persists settings in `~/.local/state/omarchy/omaclippy/config.json`. To remove residual state:
 
 ```bash
 rm -rf ~/.local/state/omarchy/omaclippy
@@ -123,8 +125,8 @@ Omaclippy transforms Clippy into an interactive visual companion for AI coding a
 ### 🧠 1. Model Context Protocol (MCP) Server (Antigravity & Claude)
 
 Omaclippy includes a built-in MCP server (`mcp_server.py`) exposing tools for AI agents:
-- `clippy_react(animation, message)`: Visual thought/action reaction + balloon.
-- `clippy_speak(message)`: Typewriter speech balloon on screen.
+- `clippy_react(animation, message, duration_ms)`: Visual thought/action reaction + balloon.
+- `clippy_speak(message, duration_ms)`: Typewriter speech balloon on screen.
 - `clippy_animate(animation)`: Play authentic animation + retro sound.
 - `clippy_status()`: Get live coordinates, mode, and visibility.
 
@@ -145,7 +147,7 @@ Add to your MCP settings or plugin configuration:
   "mcpServers": {
     "omaclippy": {
       "command": "python3",
-      "args": ["/home/dorneles/.config/omarchy/plugins/dorneles.omaclippy/mcp_server.py"]
+      "args": ["${HOME}/.config/omarchy/plugins/dorneles.omaclippy/mcp_server.py"]
     }
   }
 }

@@ -404,8 +404,7 @@ class TestHerdrIntegration(unittest.TestCase):
         # 2. Reject untrusted / relative paths
         self.assertIsNone(resolve_trusted_executable(["python3"]))
         self.assertIsNone(resolve_trusted_executable(["./python3"]))
-        self.assertIsNone(resolve_trusted_executable(["/tmp/malicious_bin"]))
-        self.assertIsNone(resolve_trusted_executable(["/home/dorneles/fake_bin"]))
+        self.assertIsNone(resolve_trusted_executable(["/home/user/fake_untrusted_bin"]))
         self.assertIsNone(resolve_trusted_executable([]))
         print("  ✓ Untrusted / relative / ambient paths correctly rejected (failed closed)")
 

@@ -320,6 +320,7 @@ Item {
 
               Text {
                 text: "Ask the Agent... (Enter to submit)"
+                textFormat: Text.PlainText
                 color: Util.alpha(root.promptTextColor, 0.5)
                 font.pixelSize: 11
                 font.italic: true
@@ -368,6 +369,7 @@ Item {
           Text {
             anchors.centerIn: parent
             text: "✕"
+            textFormat: Text.PlainText
             color: root.bubbleCloseColor
             font.pixelSize: 10
             font.bold: true
@@ -406,6 +408,7 @@ Item {
             Text {
               anchors.centerIn: parent
               text: parent.modelData.label || ""
+              textFormat: Text.PlainText
               color: root.bubbleTextColor
               font.pixelSize: 11
               font.weight: Font.Bold

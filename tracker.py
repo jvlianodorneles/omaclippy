@@ -203,7 +203,7 @@ def system_hardware_watcher():
         # 2. Battery & AC Power Monitor (Bounded sysfs file reads)
         try:
             ac_online = None
-            for ac_path in glob.glob("/sys/class/power_supply/AC*/online"):
+            for ac_path in glob.glob("/sys/class/power_supply/AC*/online") + glob.glob("/sys/class/power_supply/ADP*/online"):
                 try:
                     with open(ac_path, "r") as f:
                         raw = f.read(64).strip()
@@ -429,8 +429,23 @@ def main():
         emit({"window_moved": True, "rect": init_win})
 
     last_win_poll = time.monotonic()
+    last_event_sock_retry = 0.0
 
     while running:
+        now = time.monotonic()
+        if s_event is None and now - last_event_sock_retry > 2.0:
+            last_event_sock_retry = now
+            if not event_sock or not os.path.exists(event_sock):
+                cmd_sock, event_sock = get_hyprland_socket_paths()
+            if event_sock and os.path.exists(event_sock):
+                try:
+                    s_event = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+                    s_event.connect(event_sock)
+                    s_event.setblocking(False)
+                    event_buf = ""
+                except Exception:
+                    s_event = None
+
         r_list = list(devices.keys())
         if s_event:
             r_list.append(s_event)
