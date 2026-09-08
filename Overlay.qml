@@ -43,6 +43,25 @@ PanelWindow {
   // Settings & Configuration
   // -------------------------------------------------------------
   property bool clippyEnabled: true
+  onClippyEnabledChanged: {
+    if (!root.clippyEnabled) {
+      frameTimer.stop()
+      safetyTimer.stop()
+      moveAnim.stop()
+      springMoveAnim.stop()
+      root.isMoving = false
+      root.isCustomPlaying = false
+      root.currentAnim = "RestPose"
+      root.currentAnimObj = AnimData.getAnimation("RestPose")
+      root.currentFrameIdx = 0
+      root.animLoopCount = 0
+      root.currentFrameX = 0
+      root.currentFrameY = 0
+      root.hideSpeech()
+    } else {
+      root.applyFrame(0)
+    }
+  }
   property string clippyMode: "companion" // "companion" | "roam" | "perch"
   property string clippyScale: "normal"  // "small" | "normal" | "large" | "giant"
   property bool soundEnabled: true
@@ -145,7 +164,7 @@ PanelWindow {
   property var currentActionButtons: []
 
   function playSound(soundId) {
-    if (!root.soundEnabled || root.soundVolume <= 0 || !soundId) return
+    if (!root.clippyEnabled || !root.soundEnabled || root.soundVolume <= 0 || !soundId) return
     var safeSoundId = String(soundId).trim()
     if (!/^[a-zA-Z0-9_-]+$/.test(safeSoundId) || safeSoundId.length > 20) return
     var filePath = root.soundsDir + safeSoundId + ".mp3"
@@ -153,6 +172,7 @@ PanelWindow {
   }
 
   function applyFrame(idx) {
+    if (!root.clippyEnabled && root.currentAnim !== "RestPose") return
     if (!root.currentAnimObj || !root.currentAnimObj.frames || root.currentAnimObj.frames.length === 0) return
     if (idx < 0 || idx >= root.currentAnimObj.frames.length) return
 
@@ -160,8 +180,13 @@ PanelWindow {
     root.currentFrameX = f.x
     root.currentFrameY = f.y
 
-    if (f.sound) {
+    if (f.sound && root.clippyEnabled) {
       root.playSound(f.sound)
+    }
+
+    if (!root.clippyEnabled) {
+      frameTimer.stop()
+      return
     }
 
     var dur = f.duration > 0 ? f.duration : 100
@@ -170,6 +195,10 @@ PanelWindow {
   }
 
   function advanceFrame() {
+    if (!root.clippyEnabled) {
+      frameTimer.stop()
+      return
+    }
     if (!root.currentAnimObj || !root.currentAnimObj.frames || root.currentAnimObj.frames.length === 0) return
 
     var cur = root.currentAnimObj.frames[root.currentFrameIdx]
@@ -240,6 +269,9 @@ PanelWindow {
 
   function playAnimation(animName) {
     var safeName = String(animName || "").trim().substring(0, 40)
+    if (!root.clippyEnabled && safeName !== "RestPose") {
+      return
+    }
     var anim = AnimData.getAnimation(safeName)
     if (!anim || !anim.frames || anim.frames.length === 0) {
       root.currentAnim = "RestPose"
@@ -258,7 +290,7 @@ PanelWindow {
     root.currentFrameIdx = 0
     root.applyFrame(0)
 
-    if (safeName !== "RestPose") {
+    if (safeName !== "RestPose" && root.clippyEnabled) {
       var timeout = Math.max(8000, (anim.totalDuration || 3000) * 2.5)
       safetyTimer.interval = timeout
       safetyTimer.restart()
@@ -268,12 +300,13 @@ PanelWindow {
   }
 
   function playRandomAction() {
+    if (!root.clippyEnabled) return
     var anim = AnimData.getRandomActionAnimation()
     root.playAnimation(anim)
   }
 
   function playRandomIdle() {
-    if (root.isCustomPlaying || root.isDragging) return
+    if (!root.clippyEnabled || root.isCustomPlaying || root.isDragging) return
     var anim = AnimData.getRandomIdleAnimation()
     root.playAnimation(anim)
   }
@@ -349,6 +382,7 @@ PanelWindow {
   }
 
   function showRandomTip() {
+    if (!root.clippyEnabled) return
     var tip = AnimData.getRandomTip()
     root.speak(tip)
   }
@@ -739,6 +773,7 @@ PanelWindow {
     }
 
     function play(animName: string): string {
+      if (!root.clippyEnabled) return "paused"
       var clean = String(animName || "").trim().substring(0, 40)
       if (!clean || clean === "random") {
         root.playRandomAction()
@@ -749,6 +784,7 @@ PanelWindow {
     }
 
     function doReact(animName, msg, durationMs) {
+      if (!root.clippyEnabled) return "paused"
       var cleanAnim = String(animName || "Explain").trim().substring(0, 40)
       var cleanMsg = String(msg || "").substring(0, 500)
       root.playAnimation(cleanAnim || "Explain")
@@ -778,16 +814,19 @@ PanelWindow {
     }
 
     function speak(msg: string): string {
+      if (!root.clippyEnabled) return "paused"
       root.speak(String(msg || "Hello!").substring(0, 500))
       return "speaking"
     }
 
     function prompt(): string {
+      if (!root.clippyEnabled) return "paused"
       root.openPrompt()
       return "prompt opened"
     }
 
     function tip(): string {
+      if (!root.clippyEnabled) return "paused"
       root.showRandomTip()
       return "tip shown"
     }
@@ -1046,8 +1085,10 @@ PanelWindow {
       root.posY = h - root.clippyHeight - 130
     }
     root.applyFrame(0)
-    Qt.callLater(function() {
-      root.playAnimation("Greeting")
-    })
+    if (root.clippyEnabled) {
+      Qt.callLater(function() {
+        root.playAnimation("Greeting")
+      })
+    }
   }
 }

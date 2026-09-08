@@ -10,6 +10,7 @@ Item {
   // -------------------------------------------------------------
   property string currentAnimation: "RestPose"
   property real scaleFactor: 1.0
+  property bool clippyEnabled: true
   property bool soundEnabled: true
   property real soundVolume: 0.5
   property bool loop: false
@@ -39,6 +40,7 @@ Item {
 
   function play(animName, shouldLoop) {
     var safeName = String(animName || "").trim().substring(0, 40)
+    if (!clippyEnabled && safeName !== "RestPose") return
     var anim = AnimData.getAnimation(safeName)
     if (!anim || !anim.frames || anim.frames.length === 0) {
       currentAnimation = "RestPose"
@@ -57,7 +59,7 @@ Item {
   }
 
   function playSound(soundId) {
-    if (!soundEnabled || soundVolume <= 0 || !soundId) return
+    if (!clippyEnabled || !soundEnabled || soundVolume <= 0 || !soundId) return
     var safeSoundId = String(soundId).trim()
     if (!/^[a-zA-Z0-9_-]+$/.test(safeSoundId) || safeSoundId.length > 20) return
     var filePath = soundsDir + safeSoundId + ".mp3"
@@ -65,6 +67,7 @@ Item {
   }
 
   function applyFrame(idx) {
+    if (!clippyEnabled && currentAnimation !== "RestPose") return
     if (!animObject || !animObject.frames || animObject.frames.length === 0) return
     if (idx < 0 || idx >= animObject.frames.length) return
 
@@ -72,11 +75,16 @@ Item {
     root.frameX = f.x
     root.frameY = f.y
 
-    if (f.sound) {
+    if (f.sound && clippyEnabled) {
       playSound(f.sound)
     }
 
     root.frameChanged(idx, f.sound || "")
+
+    if (!clippyEnabled) {
+      frameTimer.stop()
+      return
+    }
 
     // Set interval for next frame
     var dur = f.duration > 0 ? f.duration : 100
@@ -87,6 +95,10 @@ Item {
   }
 
   function advanceFrame() {
+    if (!clippyEnabled) {
+      frameTimer.stop()
+      return
+    }
     if (!animObject || !animObject.frames || animObject.frames.length === 0) return
 
     var cur = animObject.frames[currentFrameIndex]

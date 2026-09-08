@@ -33,6 +33,24 @@ class TestHerdrIntegration(unittest.TestCase):
         print("\n" + "=" * 60)
         print("  OMACLIPPY <-> HERDR INTEGRATION & SECURITY TEST SUITE")
         print("=" * 60 + "\n")
+        cls.was_enabled = True
+        try:
+            res = subprocess.run(["omarchy-shell", "dorneles.omaclippy", "status"], capture_output=True, text=True, timeout=3)
+            if res.returncode == 0 and res.stdout.strip():
+                st = json.loads(res.stdout.strip())
+                cls.was_enabled = st.get("enabled", True)
+        except Exception:
+            pass
+
+    @classmethod
+    def tearDownClass(cls):
+        try:
+            if not cls.was_enabled:
+                subprocess.run(["omarchy-shell", "dorneles.omaclippy", "off"], capture_output=True, timeout=3)
+            else:
+                subprocess.run(["omarchy-shell", "dorneles.omaclippy", "on"], capture_output=True, timeout=3)
+        except Exception:
+            pass
 
     def _wait_for_anim(self, expected_anim, timeout=2.0):
         """Helper to wait for Omarchy shell IPC to reflect expected animation."""
@@ -274,6 +292,10 @@ class TestHerdrIntegration(unittest.TestCase):
         self.assertIn("enabled", initial_status)
         print(f"  ✓ Omaclippy is active in Omarchy Shell (mode: {initial_status.get('mode')}, scale: {initial_status.get('scale')})")
 
+        # Temporarily enable companion for active IPC visual reaction verification
+        subprocess.run(["omarchy-shell", "dorneles.omaclippy", "on"], capture_output=True)
+        time.sleep(0.3)
+
         # 1. Trigger 'working' agent reaction -> GetTechy
         res = subprocess.run(["omarchy-shell", "dorneles.omaclippy", "react", "GetTechy", "Agent 'herdr-worker' working..."], capture_output=True, text=True)
         self.assertEqual(res.returncode, 0)
@@ -392,6 +414,30 @@ class TestHerdrIntegration(unittest.TestCase):
 
         # Restore RestPose
         subprocess.run(["omarchy-shell", "dorneles.omaclippy", "play", "RestPose"], capture_output=True)
+
+    def test_07b_paused_state_suppression(self):
+        """Test 7b: Verify paused state suppresses animation playback, IPC, and sound."""
+        print("\n[TEST 7b] Verifying that paused state suppresses animations and sounds...")
+        # Ensure companion is turned off / paused
+        subprocess.run(["omarchy-shell", "dorneles.omaclippy", "off"], capture_output=True)
+        time.sleep(0.3)
+
+        # Status must report enabled=False
+        res = subprocess.run(["omarchy-shell", "dorneles.omaclippy", "status"], capture_output=True, text=True)
+        st = json.loads(res.stdout.strip())
+        self.assertFalse(st.get("enabled"))
+
+        # IPC play / react should return "paused" and NOT change currentAnim away from RestPose
+        res_play = subprocess.run(["omarchy-shell", "dorneles.omaclippy", "play", "GetTechy"], capture_output=True, text=True)
+        self.assertIn("paused", res_play.stdout.strip())
+
+        res_react = subprocess.run(["omarchy-shell", "dorneles.omaclippy", "react", "Alert", "Test alert"], capture_output=True, text=True)
+        self.assertIn("paused", res_react.stdout.strip())
+
+        st_after = json.loads(subprocess.run(["omarchy-shell", "dorneles.omaclippy", "status"], capture_output=True, text=True).stdout.strip())
+        self.assertEqual(st_after.get("currentAnim"), "RestPose")
+        self.assertFalse(st_after.get("isCustomPlaying"))
+        print("  ✓ Paused state successfully prevented animation playback and sound triggers")
 
     def test_08_trusted_executable_resolution(self):
         """Test 8: Verify allowlisted trusted executable resolution and fail-closed defense."""
