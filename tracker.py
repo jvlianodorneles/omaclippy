@@ -101,6 +101,135 @@ def resolve_trusted_executable(candidates):
 HERDR_BIN = resolve_trusted_executable(["/usr/bin/herdr", "/usr/local/bin/herdr"])
 
 
+def kill_and_reap_pg(proc, grace_sec=0.1):
+    """Terminates and reaps the complete process group of proc."""
+    if proc is None or getattr(proc, "pid", None) is None:
+        return
+    pgid = proc.pid
+    if pgid <= 0 or pgid == os.getpid():
+        return
+    try:
+        try:
+            os.killpg(pgid, signal.SIGTERM)
+        except OSError:
+            pass
+
+        t_end = time.monotonic() + grace_sec
+        while time.monotonic() < t_end:
+            if proc.poll() is not None:
+                break
+            time.sleep(0.01)
+
+        if proc.poll() is None:
+            try:
+                os.killpg(pgid, signal.SIGKILL)
+            except OSError:
+                pass
+
+        try:
+            proc.wait(timeout=0.2)
+        except Exception:
+            pass
+    except Exception:
+        pass
+    finally:
+        if proc.stdout:
+            try:
+                proc.stdout.close()
+            except Exception:
+                pass
+
+
+def read_proc_bounded(proc, max_bytes, timeout=3.0):
+    """Incrementally reads proc.stdout up to max_bytes with an absolute monotonic deadline.
+
+    Kills and reaps the complete process group on overflow or deadline.
+    Returns decoded str on success, or None on overflow, deadline, or error.
+    """
+    deadline = time.monotonic() + timeout
+    chunks = []
+    total_bytes = 0
+    fd = proc.stdout.fileno()
+
+    # Set non-blocking on stdout to prevent read from hanging indefinitely
+    flags = fcntl.fcntl(fd, fcntl.F_GETFL)
+    fcntl.fcntl(fd, fcntl.F_SETFL, flags | os.O_NONBLOCK)
+
+    try:
+        while True:
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                kill_and_reap_pg(proc)
+                return None
+
+            r, _, _ = select.select([fd], [], [], remaining)
+            if not r:
+                # Deadline reached
+                kill_and_reap_pg(proc)
+                return None
+
+            try:
+                chunk = os.read(fd, 4096)
+            except (BlockingIOError, InterruptedError):
+                continue
+            except OSError:
+                break
+
+            if not chunk:
+                break
+
+            total_bytes += len(chunk)
+            if total_bytes > max_bytes:
+                # Hard byte ceiling exceeded: kill and reap process group immediately
+                kill_and_reap_pg(proc)
+                return None
+
+            chunks.append(chunk)
+
+        remaining = max(0.05, deadline - time.monotonic())
+        try:
+            proc.wait(timeout=remaining)
+        except (subprocess.TimeoutExpired, Exception):
+            kill_and_reap_pg(proc)
+            return None
+
+        if proc.returncode != 0:
+            return None
+
+        return b"".join(chunks).decode("utf-8", errors="replace")
+    finally:
+        if proc.poll() is None:
+            kill_and_reap_pg(proc)
+        if proc.stdout:
+            try:
+                proc.stdout.close()
+            except Exception:
+                pass
+
+
+def query_herdr_agent_list(timeout=3.0):
+    """Executes 'herdr agent list' with bounded incremental read and process-group lifecycle."""
+    if HERDR_BIN is None:
+        return None
+
+    proc = None
+    try:
+        proc = subprocess.Popen(
+            [HERDR_BIN, "agent", "list"],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            start_new_session=True,
+        )
+        raw_data = read_proc_bounded(proc, MAX_HERDR_BYTES, timeout=timeout)
+        if not raw_data:
+            return None
+        return json.loads(raw_data.strip())
+    except Exception:
+        if proc is not None:
+            kill_and_reap_pg(proc)
+        return None
+
+
 def _signal_handler(_sig, _frame):
     global running
     running = False
@@ -147,58 +276,44 @@ def system_hardware_watcher():
     while running:
         # 1. Herdr Agent Watcher (Executed only via validated absolute path)
         if HERDR_BIN is not None:
-            try:
-                proc = subprocess.Popen(
-                    [HERDR_BIN, "agent", "list"],
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.DEVNULL,
-                    text=True,
-                )
-                try:
-                    stdout_data, _ = proc.communicate(timeout=3.0)
-                    if stdout_data and len(stdout_data) <= MAX_HERDR_BYTES:
-                        payload = json.loads(stdout_data.strip())
-                        if isinstance(payload, dict):
-                            result_obj = payload.get("result", {})
-                            if isinstance(result_obj, dict):
-                                agents = result_obj.get("agents", [])
-                                if isinstance(agents, list):
-                                    for a in agents[:MAX_AGENTS_CARDINALITY]:
-                                        if not isinstance(a, dict):
-                                            continue
-                                        raw_key = a.get("pane_id") or a.get("name") or "Agent"
-                                        key = sanitize_str(raw_key, max_len=64)
-                                        raw_name = a.get("name") or a.get("agent") or a.get("pane_id") or "Agent"
-                                        name = sanitize_str(raw_name, max_len=64)
-                                        raw_status = a.get("agent_status", "unknown")
-                                        status = raw_status if raw_status in VALID_AGENT_STATUSES else "unknown"
-                                        prev_status = known_herdr_states.get(key)
+            payload = query_herdr_agent_list(timeout=3.0)
+            if payload and isinstance(payload, dict):
+                result_obj = payload.get("result", {})
+                if isinstance(result_obj, dict):
+                    agents = result_obj.get("agents", [])
+                    if isinstance(agents, list):
+                        for a in agents[:MAX_AGENTS_CARDINALITY]:
+                            if not isinstance(a, dict):
+                                continue
+                            raw_key = a.get("pane_id") or a.get("name") or "Agent"
+                            key = sanitize_str(raw_key, max_len=64)
+                            raw_name = a.get("name") or a.get("agent") or a.get("pane_id") or "Agent"
+                            name = sanitize_str(raw_name, max_len=64)
+                            raw_status = a.get("agent_status", "unknown")
+                            status = raw_status if raw_status in VALID_AGENT_STATUSES else "unknown"
+                            prev_status = known_herdr_states.get(key)
 
-                                        if prev_status is not None and prev_status != status:
-                                            if status == "blocked":
-                                                emit({
-                                                    "agent_event": "blocked",
-                                                    "agent": name,
-                                                    "message": f"⚠️ Agent '{name}' is blocked and waiting for your response!"[:200]
-                                                })
-                                            elif status == "done":
-                                                emit({
-                                                    "agent_event": "done",
-                                                    "agent": name,
-                                                    "message": f"🎉 Agent '{name}' completed its task successfully!"[:200]
-                                                })
-                                            elif status == "working" and prev_status in ("idle", "unknown", "done", "blocked"):
-                                                emit({
-                                                    "agent_event": "working",
-                                                    "agent": name,
-                                                    "message": f"Agent '{name}' started working..."[:200]
-                                                })
+                            if prev_status is not None and prev_status != status:
+                                if status == "blocked":
+                                    emit({
+                                        "agent_event": "blocked",
+                                        "agent": name,
+                                        "message": f"⚠️ Agent '{name}' is blocked and waiting for your response!"[:200]
+                                    })
+                                elif status == "done":
+                                    emit({
+                                        "agent_event": "done",
+                                        "agent": name,
+                                        "message": f"🎉 Agent '{name}' completed its task successfully!"[:200]
+                                    })
+                                elif status == "working" and prev_status in ("idle", "unknown", "done", "blocked"):
+                                    emit({
+                                        "agent_event": "working",
+                                        "agent": name,
+                                        "message": f"Agent '{name}' started working..."[:200]
+                                    })
 
-                                        known_herdr_states[key] = status
-                except (subprocess.TimeoutExpired, json.JSONDecodeError, Exception):
-                    proc.kill()
-            except Exception:
-                pass
+                            known_herdr_states[key] = status
 
         # 2. Battery & AC Power Monitor (Bounded sysfs file reads)
         try:

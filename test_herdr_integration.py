@@ -15,6 +15,7 @@ Verifies:
 11. State configuration schema validation, finite bounds, and atomic replacement.
 """
 
+import io
 import json
 import os
 import subprocess
@@ -24,7 +25,16 @@ import time
 import unittest
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from tracker import resolve_trusted_executable, open_pointer_devices, KEYBOARD_PROBE_KEYS, _test_bit
+from tracker import (
+    resolve_trusted_executable,
+    open_pointer_devices,
+    KEYBOARD_PROBE_KEYS,
+    _test_bit,
+    read_proc_bounded,
+    kill_and_reap_pg,
+    MAX_HERDR_BYTES,
+)
+from mcp_server import read_bounded_stdin_line, MAX_STDIN_LINE_BYTES
 
 
 class TestHerdrIntegration(unittest.TestCase):
@@ -568,6 +578,96 @@ class TestHerdrIntegration(unittest.TestCase):
         huge_payload = json.dumps({"extra": "A" * 20000})
         self.assertIsNone(validate_config(huge_payload))
         print("  ✓ State configuration validated with strict finite schemas")
+
+    def test_12_herdr_producer_side_bounds_and_process_group_teardown(self):
+        """Test 12: Verify Herdr stdout incremental reader bounds data and reaps process group."""
+        print("\n[TEST 12] Testing Herdr producer-side byte bounds and process group teardown...")
+
+        # 1. Overflow: child generates more than MAX_HERDR_BYTES and sleeps
+        cmd_overflow = [
+            sys.executable,
+            "-c",
+            f"import sys, time; sys.stdout.write('A' * {MAX_HERDR_BYTES + 8192}); sys.stdout.flush(); time.sleep(10)",
+        ]
+        proc = subprocess.Popen(
+            cmd_overflow,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            start_new_session=True,
+        )
+        pid = proc.pid
+        res = read_proc_bounded(proc, MAX_HERDR_BYTES, timeout=2.0)
+        self.assertIsNone(res, "Expected None on producer-side buffer overflow")
+        self.assertIsNotNone(proc.poll(), "Expected process to be reaped")
+        # Ensure process group is completely dead
+        try:
+            os.killpg(pid, 0)
+            self.fail("Process group was not torn down on overflow")
+        except OSError:
+            pass
+        print("  ✓ Process group killed and reaped immediately on stdout byte overflow")
+
+        # 2. Deadline: child hangs indefinitely
+        cmd_deadline = [
+            sys.executable,
+            "-c",
+            "import time; time.sleep(10)",
+        ]
+        proc2 = subprocess.Popen(
+            cmd_deadline,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            start_new_session=True,
+        )
+        pid2 = proc2.pid
+        t0 = time.monotonic()
+        res2 = read_proc_bounded(proc2, MAX_HERDR_BYTES, timeout=0.2)
+        elapsed = time.monotonic() - t0
+        self.assertIsNone(res2, "Expected None on deadline expiration")
+        self.assertLess(elapsed, 1.0, "Expected quick teardown within deadline")
+        self.assertIsNotNone(proc2.poll(), "Expected process to be reaped on deadline")
+        try:
+            os.killpg(pid2, 0)
+            self.fail("Process group was not torn down on deadline")
+        except OSError:
+            pass
+        print("  ✓ Process group killed and reaped immediately on monotonic deadline")
+
+        # 3. Normal valid output within bounds
+        cmd_normal = [
+            sys.executable,
+            "-c",
+            "import sys; sys.stdout.write('{\"status\": \"ok\"}'); sys.stdout.flush()",
+        ]
+        proc3 = subprocess.Popen(
+            cmd_normal,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            start_new_session=True,
+        )
+        res3 = read_proc_bounded(proc3, MAX_HERDR_BYTES, timeout=2.0)
+        self.assertEqual(res3, '{"status": "ok"}')
+        self.assertIsNotNone(proc3.poll())
+        print("  ✓ Normal output within byte ceiling read successfully")
+
+    def test_13_mcp_bounded_stdin_rejection_and_drain(self):
+        """Test 13: Verify MCP server stdin bounded read, early rejection, and drain semantics."""
+        print("\n[TEST 13] Testing MCP server bounded stdin reader and drain semantics...")
+
+        # 1. Reject overflow before decoding and drain remainder
+        oversized = b"X" * (MAX_STDIN_LINE_BYTES + 4000) + b"\n"
+        valid_next = b'{"jsonrpc": "2.0", "id": 77, "method": "ping"}\n'
+        stream = io.BytesIO(oversized + valid_next)
+
+        res1 = read_bounded_stdin_line(stream)
+        self.assertEqual(res1, "", "Oversized line should be rejected as empty without decoding")
+
+        res2 = read_bounded_stdin_line(stream)
+        self.assertEqual(res2, valid_next.decode("utf-8"), "Subsequent valid request must be preserved after drain")
+
+        res3 = read_bounded_stdin_line(stream)
+        self.assertIsNone(res3, "EOF must return None")
+        print("  ✓ Oversized line rejected before decoding and safely drained to next request")
 
 
 if __name__ == "__main__":

@@ -20,6 +20,7 @@ SERVER_NAME = "omaclippy"
 SERVER_VERSION = "1.0.0"
 
 MAX_STDIN_LINE_BYTES = 65536
+MAX_DRAIN_BYTES = 10 * 1024 * 1024
 MAX_MESSAGE_CHARS = 500
 MAX_OUTPUT_BYTES = 16384
 
@@ -203,16 +204,50 @@ def send_response(response):
     sys.stdout.flush()
 
 
+def read_bounded_stdin_line(stream=None):
+    """Reads a line from stdin bounded at MAX_STDIN_LINE_BYTES + 1 bytes.
+
+    Rejects overflow before decoding and JSON parsing, and safely drains
+    or terminates the oversized request to protect against unbounded allocations.
+    """
+    if stream is None:
+        stream = getattr(sys.stdin, "buffer", sys.stdin)
+    raw = stream.readline(MAX_STDIN_LINE_BYTES + 1)
+    if not raw:
+        return None
+
+    is_bytes = isinstance(raw, (bytes, bytearray))
+    nl = b"\n" if is_bytes else "\n"
+
+    # Reject overflow before decoding and JSON parsing
+    if len(raw) > MAX_STDIN_LINE_BYTES:
+        drained = 0
+        while not raw.endswith(nl):
+            chunk = stream.readline(65536)
+            if not chunk:
+                break
+            drained += len(chunk)
+            if chunk.endswith(nl):
+                break
+            if drained > MAX_DRAIN_BYTES:
+                # Terminate on unbounded flood
+                return None
+        return ""
+
+    if is_bytes:
+        try:
+            return raw.decode("utf-8")
+        except UnicodeDecodeError:
+            return ""
+    return raw
+
+
 def main():
     while True:
         try:
-            line = sys.stdin.readline()
-            if not line:
+            line = read_bounded_stdin_line()
+            if line is None:
                 break
-            if len(line.encode("utf-8")) > MAX_STDIN_LINE_BYTES:
-                # Reject line exceeding bounded byte limit before parsing
-                continue
-
             line = line.strip()
             if not line:
                 continue
